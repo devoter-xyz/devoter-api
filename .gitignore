@@ -5,3 +5,5 @@ node_modules
 # Prisma symlink and folder
 prisma
 prisma/
+
+.env
