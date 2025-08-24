@@ -46,19 +46,26 @@ export function verifySignatureWithTimestamp(
       return { isValid: false, error: "Invalid signature" };
     }
 
-    // Extract timestamp from message
-    // Expected format: "Sign this message to authenticate: [timestamp]"
-    const timestampMatch = message.match(/\[(\d+)\]/);
+    // Extract timestamp from message (anchored to expected format)
+    // Expected format: "Sign this message to <purpose>: [<13-digit-ms-timestamp>]"
+    const timestampMatch = message.match(/^Sign this message to .+:\s*\[(\d{13})\]$/);
 
     if (!timestampMatch) {
       return { isValid: false, error: "No timestamp found in message" };
     }
 
-    const timestamp = parseInt(timestampMatch[1]!);
+    const timestamp = Number(timestampMatch[1]!);
+    if (!Number.isSafeInteger(timestamp)) {
+      return { isValid: false, error: "Invalid timestamp" };
+    }
     const now = Date.now();
-    const maxAge = maxAgeMinutes * 60 * 1000; // Convert to milliseconds
+    const maxAgeMs = maxAgeMinutes * 60 * 1000; // Convert to milliseconds
 
-    if (now - timestamp > maxAge) {
+    const age = now - timestamp;
+    if (age < 0) {
+      return { isValid: false, error: "Message timestamp is in the future" };
+    }
+    if (age > maxAgeMs) {
       return { isValid: false, error: "Message has expired" };
     }
 
