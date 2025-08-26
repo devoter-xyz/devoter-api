@@ -24,8 +24,10 @@ const start = async () => {
     })
 
     // API routes will be registered here
+    await server.register(import('./routes/register.js'))
+    
     server.register(async function (fastify) {
-      // Future routes: /register, /api-keys
+      // Future routes: /api-keys
       fastify.get('/health', async () => {
         return { 
           status: 'healthy', 
