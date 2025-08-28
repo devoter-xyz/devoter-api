@@ -2,12 +2,16 @@ import type { FastifyInstance } from 'fastify';
 import { PrismaClient } from '@prisma/client';
 import { verifyWalletSignature } from '../middleware/auth.js';
 import { generateUniqueApiKey, hashApiKey, maskApiKey } from '../utils/generateApiKey.js';
+import { rateLimitConfigs } from '../middleware/rateLimit.js';
 
 const prisma = new PrismaClient();
 
 export default async function apiKeysRoute(fastify: FastifyInstance) {
   // POST /api-keys - Create a new API key
   fastify.post('/api-keys', {
+    config: {
+      rateLimit: rateLimitConfigs.apiKeyCreation
+    },
     preHandler: verifyWalletSignature,
     handler: async (request, reply) => {
       try {
@@ -76,6 +80,9 @@ export default async function apiKeysRoute(fastify: FastifyInstance) {
 
   // GET /api-keys - Get all API keys for a wallet
   fastify.get('/api-keys', {
+    config: {
+      rateLimit: rateLimitConfigs.general
+    },
     preHandler: async (request, reply) => {
       // Custom validation for GET request with headers
       const walletAddress = request.headers['x-wallet-address'] as string;

@@ -1,5 +1,6 @@
 import fastify from "fastify";
 import { config } from "dotenv";
+import { registerRateLimiting, rateLimitConfigs } from "./middleware/rateLimit.js";
 
 // Load environment variables
 config();
@@ -18,8 +19,15 @@ const start = async () => {
       credentials: true,
     });
 
-    // Health check endpoint
-    server.get("/ping", async (request, reply) => {
+    // Register rate limiting
+    await registerRateLimiting(server);
+
+    // Health check endpoint with rate limiting
+    server.get("/ping", {
+      config: {
+        rateLimit: rateLimitConfigs.health
+      }
+    }, async (request, reply) => {
       return { status: "ok", message: "devoter-api is running" };
     });
 
@@ -28,8 +36,12 @@ const start = async () => {
     await server.register(import("./routes/apiKeys.js"));
 
     server.register(async function (fastify) {
-      // Future routes: /api-keys
-      fastify.get("/health", async () => {
+      // Health endpoint with rate limiting
+      fastify.get("/health", {
+        config: {
+          rateLimit: rateLimitConfigs.health
+        }
+      }, async () => {
         return {
           status: "healthy",
           timestamp: new Date().toISOString(),

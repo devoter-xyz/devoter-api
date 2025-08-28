@@ -1,12 +1,16 @@
 import type { FastifyInstance } from 'fastify';
 import { PrismaClient } from '@prisma/client';
 import { verifyWalletSignature } from '../middleware/auth.js';
+import { rateLimitConfigs } from '../middleware/rateLimit.js';
 
 const prisma = new PrismaClient();
 
 export default async function registerRoute(fastify: FastifyInstance) {
-  // POST /register - Register an account using wallet address
+  // POST /register - Register a new user with wallet authentication
   fastify.post('/register', {
+    config: {
+      rateLimit: rateLimitConfigs.registration
+    },
     preHandler: verifyWalletSignature,
     handler: async (request, reply) => {
       try {
