@@ -2,6 +2,13 @@
 GAMEPLAN.MD
 node_modules
 
+# Build output
+dist/
+*.js
+*.js.map
+*.d.ts
+*.d.ts.map
+
 # Prisma symlink and folder
 prisma
 prisma/
