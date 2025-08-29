@@ -25,6 +25,7 @@ const start = async () => {
 
     // API routes will be registered here
     await server.register(import("./routes/register.js"));
+    await server.register(import("./routes/apiKeys.js"));
 
     server.register(async function (fastify) {
       // Future routes: /api-keys
