@@ -1,9 +1,13 @@
 import type { FastifyInstance } from "fastify";
 import { PrismaClient } from "@prisma/client";
 import { verifyWalletSignature } from "../middleware/auth.js";
-
 import { rateLimitConfigs } from "../middleware/rateLimit.js";
 import { Type } from "@sinclair/typebox";
+import {
+  ApiError,
+  asyncHandler,
+  HttpStatusCode,
+} from "../utils/errorHandler.js";
 
 const prisma = new PrismaClient();
 
@@ -37,27 +41,27 @@ export default async function registerRoute(fastify: FastifyInstance) {
       rateLimit: rateLimitConfigs.registration,
     },
     preHandler: verifyWalletSignature,
-    handler: async (request, reply) => {
-      try {
-        const { walletAddress, message, signature } = request.body as {
-          walletAddress: string;
-          message: string;
-          signature: string;
-        };
+    handler: asyncHandler(async (request, reply) => {
+      const { walletAddress } = request.body as {
+        walletAddress: string;
+        message: string;
+        signature: string;
+      };
 
-        // Check if user already exists
-        const existingUser = await prisma.apiUser.findUnique({
-          where: { walletAddress: walletAddress.toLowerCase() },
+      // Check if user already exists
+      const existingUser = await prisma.apiUser.findUnique({
+        where: { walletAddress: walletAddress.toLowerCase() },
+      });
+
+      if (existingUser) {
+        return reply.status(HttpStatusCode.OK).send({
+          success: true,
+          userId: existingUser.id,
+          message: "User already registered",
         });
+      }
 
-        if (existingUser) {
-          return reply.status(200).send({
-            success: true,
-            userId: existingUser.id,
-            message: "User already registered",
-          });
-        }
-
+      try {
         // Create new user
         const newUser = await prisma.apiUser.create({
           data: {
@@ -65,18 +69,31 @@ export default async function registerRoute(fastify: FastifyInstance) {
           },
         });
 
-        return reply.status(201).send({
+        return reply.status(HttpStatusCode.CREATED).send({
           success: true,
           userId: newUser.id,
           message: "User registered successfully",
         });
       } catch (error) {
-        request.log.error(`Registration error: ${error}`);
-        return reply.status(500).send({
-          success: false,
-          error: "Internal server error",
-        });
+        // This will be caught by asyncHandler
+        if ((error as any)?.code === "P2002") {
+          // Handle race condition where user was created between our check and create
+          const existingUser = await prisma.apiUser.findUnique({
+            where: { walletAddress: walletAddress.toLowerCase() },
+          });
+
+          if (existingUser) {
+            return reply.status(HttpStatusCode.OK).send({
+              success: true,
+              userId: existingUser.id,
+              message: "User already registered",
+            });
+          }
+        }
+
+        // Re-throw to be caught by asyncHandler
+        throw error;
       }
-    },
+    }),
   });
 }

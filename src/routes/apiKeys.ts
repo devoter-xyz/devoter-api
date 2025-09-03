@@ -6,9 +6,13 @@ import {
   hashApiKey,
   maskApiKey,
 } from "../utils/generateApiKey.js";
-
 import { rateLimitConfigs } from "../middleware/rateLimit.js";
 import { Type } from "@sinclair/typebox";
+import {
+  ApiError,
+  asyncHandler,
+  HttpStatusCode,
+} from "../utils/errorHandler.js";
 
 const prisma = new PrismaClient();
 
@@ -46,69 +50,61 @@ export default async function apiKeysRoute(fastify: FastifyInstance) {
       rateLimit: rateLimitConfigs.apiKeyCreation,
     },
     preHandler: verifyWalletSignature,
-    handler: async (request, reply) => {
-      try {
-        const { walletAddress } = request.body as {
-          walletAddress: string;
-          message: string;
-          signature: string;
-        };
+    handler: asyncHandler(async (request, reply) => {
+      const { walletAddress } = request.body as {
+        walletAddress: string;
+        message: string;
+        signature: string;
+      };
 
-        // Find the user
-        const user = await prisma.apiUser.findUnique({
-          where: { walletAddress: walletAddress.toLowerCase() },
-          include: {
-            apiKeys: {
-              where: {
-                status: "ACTIVE",
-              },
+      // Find the user
+      const user = await prisma.apiUser.findUnique({
+        where: { walletAddress: walletAddress.toLowerCase() },
+        include: {
+          apiKeys: {
+            where: {
+              status: "ACTIVE",
             },
           },
-        });
+        },
+      });
 
-        if (!user) {
-          return reply.status(404).send({
-            success: false,
-            error: "User not found. Please register first.",
-          });
-        }
-
-        // Check if user already has 3 active API keys
-        if (user.apiKeys.length >= 3) {
-          return reply.status(400).send({
-            success: false,
-            error:
-              "Maximum API key limit reached. You can have up to 3 active API keys.",
-          });
-        }
-
-        // Generate new API key
-        const newApiKey = generateUniqueApiKey(user.id);
-        const hashedKey = hashApiKey(newApiKey);
-
-        // Store the API key in database
-        const createdApiKey = await prisma.apiKey.create({
-          data: {
-            apiUserId: user.id,
-            key: hashedKey, // Store hashed version
-            status: "ACTIVE",
-          },
-        });
-
-        return reply.status(201).send({
-          success: true,
-          apiKey: newApiKey, // Return the actual key (only time it's shown)
-          keyId: createdApiKey.id,
-          message: "API key created successfully",
-        });
-      } catch (error) {
-        request.log.error(`API key creation error: ${error}`);
-        return reply.status(500).send({
-          success: false,
-          error: "Internal server error",
-        });
+      if (!user) {
+        throw ApiError.notFound(
+          "User not found. Please register first.",
+          "USER_NOT_FOUND"
+        );
       }
-    },
+
+      // Check if user already has 3 active API keys
+      if (user.apiKeys.length >= 3) {
+        throw ApiError.badRequest(
+          "Maximum API key limit reached. You can have up to 3 active API keys.",
+          "MAX_API_KEYS_REACHED",
+          { limit: 3, current: user.apiKeys.length }
+        );
+      }
+
+      // Generate new API key
+      const newApiKey = generateUniqueApiKey(user.id);
+      const hashedKey = hashApiKey(newApiKey);
+
+      // Store the API key in database
+      const createdApiKey = await prisma.apiKey.create({
+        data: {
+          apiUserId: user.id,
+          key: hashedKey, // Store hashed version
+          status: "ACTIVE",
+        },
+      });
+
+      return reply.status(HttpStatusCode.CREATED).send({
+        success: true,
+        apiKey: newApiKey, // Return the actual key (only time it's shown)
+        keyId: createdApiKey.id,
+        message: "API key created successfully",
+      });
+    }),
   });
 
   // GET /api-keys - Get all API keys for a wallet
@@ -152,18 +148,17 @@ export default async function apiKeysRoute(fastify: FastifyInstance) {
     config: {
       rateLimit: rateLimitConfigs.general,
     },
-    preHandler: async (request, reply) => {
+    preHandler: asyncHandler(async (request, reply) => {
       // Custom validation for GET request with headers
       const walletAddress = request.headers["x-wallet-address"] as string;
       const message = request.headers["x-message"] as string;
       const signature = request.headers["x-signature"] as string;
 
       if (!walletAddress || !message || !signature) {
-        return reply.status(400).send({
-          success: false,
-          error:
-            "Missing required headers: x-wallet-address, x-message, x-signature",
-        });
+        throw ApiError.badRequest(
+          "Missing required headers: x-wallet-address, x-message, x-signature",
+          "MISSING_AUTH_HEADERS"
+        );
       }
 
       // Create a fake body for the middleware
@@ -171,50 +166,39 @@ export default async function apiKeysRoute(fastify: FastifyInstance) {
 
       // Call the wallet signature verification
       return verifyWalletSignature(request, reply);
-    },
-    handler: async (request, reply) => {
-      try {
-        const walletAddress = request.headers["x-wallet-address"] as string;
+    }),
+    handler: asyncHandler(async (request, reply) => {
+      const walletAddress = request.headers["x-wallet-address"] as string;
 
-        // Find the user and their API keys
-        const user = await prisma.apiUser.findUnique({
-          where: { walletAddress: walletAddress.toLowerCase() },
-          include: {
-            apiKeys: {
-              orderBy: {
-                createdAt: "desc",
-              },
+      // Find the user and their API keys
+      const user = await prisma.apiUser.findUnique({
+        where: { walletAddress: walletAddress.toLowerCase() },
+        include: {
+          apiKeys: {
+            orderBy: {
+              createdAt: "desc",
             },
           },
-        });
+        },
+      });
 
-        if (!user) {
-          return reply.status(404).send({
-            success: false,
-            error: "User not found",
-          });
-        }
-
-        // Return masked API keys with metadata
-        const apiKeys = user.apiKeys.map((key) => ({
-          id: key.id,
-          key: maskApiKey(key.key), // Use our utility function to mask the key
-          createdAt: key.createdAt.toISOString(),
-          totalUsed: key.totalUsed,
-          status: key.status,
-        }));
-
-        return reply.status(200).send({
-          success: true,
-          apiKeys,
-        });
-      } catch (error) {
-        request.log.error(`API keys retrieval error: ${error}`);
-        return reply.status(500).send({
-          success: false,
-          error: "Internal server error",
-        });
+      if (!user) {
+        throw ApiError.notFound("User not found", "USER_NOT_FOUND");
       }
-    },
+
+      // Return masked API keys with metadata
+      const apiKeys = user.apiKeys.map((key) => ({
+        id: key.id,
+        key: maskApiKey(key.key), // Use our utility function to mask the key
+        createdAt: key.createdAt.toISOString(),
+        totalUsed: key.totalUsed,
+        status: key.status,
+      }));
+
+      return reply.status(HttpStatusCode.OK).send({
+        success: true,
+        apiKeys,
+      });
+    }),
   });
 }
