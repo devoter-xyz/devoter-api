@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { ethers } from "ethers";
-import { verifySignature } from "../../src/utils/verifySignature.js";
+import { verifySignature } from "../../src/utils/verifySignature";
 
 describe("Basic Signature Verification", () => {
   // Test valid signatures from known wallet addresses
