@@ -1,5 +1,5 @@
 import type { FastifyRequest, FastifyReply } from "fastify";
-import { verifySignature } from "../utils/verifySignature.js";
+import { verifySignatureWithTimestamp } from "../utils/verifySignature.js";
 import { validateWalletAuthInput } from "../utils/validation.js";
 import { ApiError } from "../utils/errorHandler.js";
 
@@ -23,12 +23,18 @@ export async function verifyWalletSignature(
     signature: string;
   };
 
-  // Verify the signature
-  const isValid = verifySignature(message, signature, walletAddress);
+  // Verify signature and freshness (prevents replay)
+  const { isValid, error } = verifySignatureWithTimestamp(
+    message,
+    signature,
+    walletAddress,
+    5 // maxAgeMinutes; consider making this configurable
+  );
   if (!isValid) {
     throw ApiError.unauthorized(
-      "Invalid wallet signature",
-      "INVALID_SIGNATURE"
+      "Invalid or expired wallet signature",
+      "INVALID_SIGNATURE",
+      error ? { reason: error } : undefined
     );
   }
 

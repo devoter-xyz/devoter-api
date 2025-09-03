@@ -141,6 +141,28 @@ export function handleError(
 
   if (error instanceof ApiError) {
     apiError = error;
+  } else if (
+    (error as any)?.code === "FST_ERR_VALIDATION" ||
+    (error as any)?.validation
+  ) {
+    // Fastify schema validation error
+    apiError = ApiError.badRequest(
+      "Request validation failed",
+      "VALIDATION_ERROR",
+      { errors: (error as any).validation || (error as any).errors || [] }
+    );
+  } else if (
+    typeof (error as any)?.statusCode === "number" &&
+    (error as any).statusCode >= 400 &&
+    (error as any).statusCode < 600
+  ) {
+    // Preserve known HTTP status from third-party errors
+    const status = (error as any).statusCode as number;
+    apiError = new ApiError(
+      status as HttpStatusCode,
+      (error as any).message || "Request failed",
+      "UPSTREAM_ERROR"
+    );
   } else if (error.name === "PrismaClientKnownRequestError") {
     // Handle Prisma specific errors
     const prismaError = error as any; // Type assertion for Prisma error
@@ -164,6 +186,11 @@ export function handleError(
         "DATABASE_ERROR"
       );
     }
+  } else if (error.name === "PrismaClientValidationError") {
+    apiError = ApiError.badRequest(
+      "Invalid database query",
+      "PRISMA_VALIDATION_ERROR"
+    );
   } else {
     // Generic error handling
     apiError = ApiError.internal();
