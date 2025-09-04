@@ -1,6 +1,10 @@
 import fastify from "fastify";
 import { config } from "dotenv";
-import { registerRateLimiting, rateLimitConfigs } from "./middleware/rateLimit.js";
+import {
+  registerRateLimiting,
+  rateLimitConfigs,
+} from "./middleware/rateLimit.js";
+import errorPlugin from "./plugins/errorPlugin.js";
 
 // Load environment variables
 config();
@@ -13,6 +17,9 @@ const server = fastify({
 
 const start = async () => {
   try {
+    // Register error handling plugin first
+    await server.register(errorPlugin);
+
     // Register CORS
     await server.register((await import("@fastify/cors")).default, {
       origin: process.env.CORS_ORIGIN || "http://localhost:3000",
@@ -23,13 +30,17 @@ const start = async () => {
     await registerRateLimiting(server);
 
     // Health check endpoint with rate limiting
-    server.get("/ping", {
-      config: {
-        rateLimit: rateLimitConfigs.health
+    server.get(
+      "/ping",
+      {
+        config: {
+          rateLimit: rateLimitConfigs.health,
+        },
+      },
+      async (request, reply) => {
+        return { status: "ok", message: "devoter-api is running" };
       }
-    }, async (request, reply) => {
-      return { status: "ok", message: "devoter-api is running" };
-    });
+    );
 
     // API routes will be registered here
     await server.register(import("./routes/register.js"));
@@ -37,17 +48,21 @@ const start = async () => {
 
     server.register(async function (fastify) {
       // Health endpoint with rate limiting
-      fastify.get("/health", {
-        config: {
-          rateLimit: rateLimitConfigs.health
+      fastify.get(
+        "/health",
+        {
+          config: {
+            rateLimit: rateLimitConfigs.health,
+          },
+        },
+        async () => {
+          return {
+            status: "healthy",
+            timestamp: new Date().toISOString(),
+            service: "devoter-api",
+          };
         }
-      }, async () => {
-        return {
-          status: "healthy",
-          timestamp: new Date().toISOString(),
-          service: "devoter-api",
-        };
-      });
+      );
     });
 
     const port = parseInt(process.env.PORT || "3000");

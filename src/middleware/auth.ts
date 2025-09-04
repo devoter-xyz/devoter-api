@@ -1,6 +1,7 @@
 import type { FastifyRequest, FastifyReply } from "fastify";
-import { verifySignature } from "../utils/verifySignature.js";
+import { verifySignatureWithTimestamp } from "../utils/verifySignature.js";
 import { validateWalletAuthInput } from "../utils/validation.js";
+import { ApiError } from "../utils/errorHandler.js";
 
 // Enhanced middleware with comprehensive input validation
 export async function verifyWalletSignature(
@@ -10,10 +11,10 @@ export async function verifyWalletSignature(
   // Validate input structure and format
   const validation = validateWalletAuthInput(request.body);
   if (!validation.isValid) {
-    return reply.status(400).send({
-      success: false,
-      error: validation.error,
-    });
+    throw ApiError.badRequest(
+      validation.error || "Invalid wallet authentication input",
+      "INVALID_AUTH_INPUT"
+    );
   }
 
   const { walletAddress, message, signature } = request.body as {
@@ -22,13 +23,19 @@ export async function verifyWalletSignature(
     signature: string;
   };
 
-  // Verify the signature
-  const isValid = verifySignature(message, signature, walletAddress);
+  // Verify signature and freshness (prevents replay)
+  const { isValid, error } = verifySignatureWithTimestamp(
+    message,
+    signature,
+    walletAddress,
+    5 // maxAgeMinutes; consider making this configurable
+  );
   if (!isValid) {
-    return reply.status(401).send({
-      success: false,
-      error: "Invalid signature",
-    });
+    throw ApiError.unauthorized(
+      "Invalid or expired wallet signature",
+      "INVALID_SIGNATURE",
+      error ? { reason: error } : undefined
+    );
   }
 
   // If all validation passes, continue
