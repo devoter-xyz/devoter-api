@@ -9,6 +9,12 @@ export async function verifyWalletSignature(
   reply: FastifyReply
 ) {
   // Validate input structure and format
+  if (!request.body || typeof request.body !== 'object') {
+    throw ApiError.badRequest(
+      "Missing or invalid request body",
+      "INVALID_AUTH_INPUT"
+    );
+  }
   const validation = validateWalletAuthInput(request.body);
   if (!validation.isValid) {
     throw ApiError.badRequest(
@@ -17,11 +23,18 @@ export async function verifyWalletSignature(
     );
   }
 
-  const { walletAddress, message, signature } = request.body as {
-    walletAddress: string;
-    message: string;
-    signature: string;
-  };
+  // Type guard for request.body
+  const { walletAddress, message, signature } = request.body as Record<string, unknown>;
+  if (
+    typeof walletAddress !== 'string' ||
+    typeof message !== 'string' ||
+    typeof signature !== 'string'
+  ) {
+    throw ApiError.badRequest(
+      "walletAddress, message, and signature must be strings",
+      "INVALID_AUTH_INPUT"
+    );
+  }
 
   // Verify signature and freshness (prevents replay)
   const { isValid, error } = verifySignatureWithTimestamp(

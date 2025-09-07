@@ -1,4 +1,4 @@
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 
 /**
  * Rate limiting configuration for different endpoint types
@@ -48,9 +48,9 @@ export const rateLimitConfigs = {
 /**
  * Custom error response for rate limit exceeded
  */
-export const rateLimitErrorHandler = (request: any, context: any) => {
+export const rateLimitErrorHandler = (request: FastifyRequest, context: any) => {
   return {
-    success: false,
+    statusCode: 429,
     error: 'Rate limit exceeded',
     message: `Too many requests. Try again in ${Math.ceil(context.ttl / 1000)} seconds.`,
     retryAfter: Math.ceil(context.ttl / 1000)
@@ -60,15 +60,19 @@ export const rateLimitErrorHandler = (request: any, context: any) => {
 /**
  * Key generator for rate limiting - uses IP + wallet address if available
  */
-export const rateLimitKeyGenerator = (request: any) => {
+export const rateLimitKeyGenerator = (request: FastifyRequest) => {
   const ip = request.ip;
-  const walletAddress = request.body?.walletAddress || request.headers['x-wallet-address'];
-  
+  let walletAddress: string | undefined;
+  if (request.body && typeof request.body === 'object' && 'walletAddress' in request.body) {
+    walletAddress = (request.body as any).walletAddress;
+  }
+  if (!walletAddress && request.headers['x-wallet-address']) {
+    walletAddress = String(request.headers['x-wallet-address']);
+  }
   // If wallet address is available, use IP + wallet for more granular control
   if (walletAddress) {
     return `${ip}:${walletAddress.toLowerCase()}`;
   }
-  
   // Fallback to just IP
   return ip;
 };
@@ -101,7 +105,8 @@ export async function registerRateLimiting(fastify: FastifyInstance) {
 export function createRateLimitHandler(config: typeof rateLimitConfigs.general) {
   return {
     config,
-    preHandler: async (request: any, reply: any) => {
+    preHandler: async (request: FastifyRequest, reply: FastifyReply) => {
+      // You can add custom logic here if needed
       return;
     }
   };
