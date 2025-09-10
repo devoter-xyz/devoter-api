@@ -129,10 +129,16 @@ describe('API Key Generation', () => {
 
   describe('isValidApiKeyFormat', () => {
     it('should validate correctly formatted API keys', () => {
+      // Generate a valid key with current timestamp
+      const validKey = generateUniqueApiKey('test-user');
+      expect(isValidApiKeyFormat(validKey)).toBe(true);
+      
+      // Test with custom valid keys that have valid timestamps
+      const currentTimestamp = Date.now().toString(36);
       const validKeys = [
-        'dv_1234abcd_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefgh',
-        'test_timestamp_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefgh',
-        'ab_1_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmn'
+        `dv_${currentTimestamp}_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefgh`,
+        `test_${currentTimestamp}_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefgh`,
+        `ab_${currentTimestamp}_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmn`
       ];
       
       validKeys.forEach(key => {
@@ -153,9 +159,24 @@ describe('API Key Generation', () => {
       ];
       
       invalidKeys.forEach(key => {
-        const result = isValidApiKeyFormat(key);
-        console.log(`Key: "${key}" - isValid: ${result}`);
-        expect(result).toBe(false);
+        expect(isValidApiKeyFormat(key)).toBe(false);
+      });
+    });
+    
+    it('should reject keys with invalid timestamps', () => {
+      const currentTimestamp = Date.now();
+      const futureTimestamp = (currentTimestamp + 1000000).toString(36); // Far future
+      const invalidTimestampKeys = [
+        // Future timestamp (more than buffer allows)
+        `dv_${futureTimestamp}_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefgh`,
+        // Invalid timestamp format (not a valid base36 number)
+        'dv_invalid!_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefgh',
+        // Negative timestamp (converted to base36)
+        'dv_-1_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefgh'
+      ];
+      
+      invalidTimestampKeys.forEach(key => {
+        expect(isValidApiKeyFormat(key)).toBe(false);
       });
     });
   });
