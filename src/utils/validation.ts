@@ -27,8 +27,20 @@ export function validateWalletAuthInput(input: any): ValidationResult {
 
   const { walletAddress, message, signature } = input;
 
+  // Check if input is an object
+  if (!input || typeof input !== "object" || Array.isArray(input)) {
+    return {
+      isValid: false,
+      error: "Request body must be a valid JSON object",
+    };
+  }
+
   // Check required fields
-  if (!walletAddress || !message || !signature) {
+  if (
+    !Object.prototype.hasOwnProperty.call(input, "walletAddress") ||
+    !Object.prototype.hasOwnProperty.call(input, "message") ||
+    !Object.prototype.hasOwnProperty.call(input, "signature")
+  ) {
     return {
       isValid: false,
       error: "Missing required fields: walletAddress, message, signature",
@@ -47,16 +59,22 @@ export function validateWalletAuthInput(input: any): ValidationResult {
     };
   }
 
-  // Validate wallet address format (Ethereum address)
-  const addressRegex = /^0x[a-fA-F0-9]{40}$/;
-  if (!addressRegex.test(walletAddress)) {
+  // Validate message content
+  if (message.trim().length === 0) {
     return {
       isValid: false,
-      error: "Invalid Ethereum wallet address format",
+      error: "Message cannot be empty",
     };
   }
 
-  // Validate signature format (Ethereum signature)
+  if (message.length > 1000) {
+    return {
+      isValid: false,
+      error: "Message too long (max 1000 characters)",
+    };
+  }
+
+  // Validate signature format
   const signatureRegex = /^0x[a-fA-F0-9]{130}$/;
   if (!signatureRegex.test(signature)) {
     return {
@@ -66,19 +84,12 @@ export function validateWalletAuthInput(input: any): ValidationResult {
     };
   }
 
-  // Validate message is not empty
-  if (message.trim().length === 0) {
+  // Validate wallet address format
+  const addressRegex = /^0x[a-fA-F0-9]{40}$/;
+  if (!addressRegex.test(walletAddress)) {
     return {
       isValid: false,
-      error: "Message cannot be empty",
-    };
-  }
-
-  // Validate message length (reasonable limits)
-  if (message.length > 1000) {
-    return {
-      isValid: false,
-      error: "Message too long (max 1000 characters)",
+      error: "Invalid Ethereum wallet address format",
     };
   }
 
