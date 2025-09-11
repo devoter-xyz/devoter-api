@@ -54,7 +54,33 @@ export function maskApiKey(apiKey: string, visibleChars: number = 8): string {
 export function isValidApiKeyFormat(apiKey: string): boolean {
   // Check if it matches our generated format: prefix_timestamp_randompart
   const apiKeyPattern = /^[a-zA-Z]{2,}_[0-9a-z]+_[A-Za-z0-9_-]{32,}$/;
-  return apiKeyPattern.test(apiKey);
+  
+  if (!apiKeyPattern.test(apiKey)) {
+    return false;
+  }
+  
+  // Extract and validate the timestamp part
+  const parts = apiKey.split('_');
+  
+  // Ensure the timestamp part exists
+  if (parts.length < 2 || !parts[1]) {
+    return false;
+  }
+  
+  const timestampPart = parts[1];
+  
+  // Validate that the timestamp is a valid base36 number
+  // and is within a reasonable range (not in the future)
+  try {
+    const timestamp = parseInt(timestampPart, 36);
+    const now = Date.now();
+    
+    // Timestamp should be a positive number and not in the future
+    // Allow a small buffer (5 seconds) for clock differences
+    return timestamp > 0 && timestamp <= now + 5000;
+  } catch (e) {
+    return false;
+  }
 }
 
 /**
