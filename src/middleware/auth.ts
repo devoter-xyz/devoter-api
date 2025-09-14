@@ -24,7 +24,7 @@ export async function verifyWalletSignature(
   }
 
   // Type guard for request.body
-  const { walletAddress, message, signature } = request.body as Record<string, unknown>;
+  const { walletAddress, message, signature } = request.body as { walletAddress: string; message: string; signature: string };
   if (
     typeof walletAddress !== 'string' ||
     typeof message !== 'string' ||
@@ -50,6 +50,5 @@ export async function verifyWalletSignature(
       error ? { reason: error } : undefined
     );
   }
-
   // If all validation passes, continue
 }
