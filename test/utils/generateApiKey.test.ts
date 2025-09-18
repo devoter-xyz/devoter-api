@@ -1,16 +1,23 @@
+
+// Import test utilities from Vitest
 import { describe, it, expect } from 'vitest';
+
+// Import API key utility functions to be tested
 import {
-  generateApiKey,
-  generateUniqueApiKey,
-  hashApiKey,
-  maskApiKey,
-  isValidApiKeyFormat,
-  generateMultipleApiKeys
+  generateApiKey, // Generates a random API key
+  generateUniqueApiKey, // Generates a unique API key with prefix and timestamp
+  hashApiKey, // Hashes an API key using SHA-256
+  maskApiKey, // Masks an API key for display
+  isValidApiKeyFormat, // Validates API key format
+  generateMultipleApiKeys // Generates multiple API keys at once
 } from '../../src/utils/generateApiKey';
 
+// Test suite for API Key generation and validation utilities
 describe('API Key Generation', () => {
+  // Tests for the generateApiKey function
   describe('generateApiKey', () => {
-    it('should generate a random API key with default length', () => {
+  // Should generate a random API key of default length (32 bytes, 43 base64url chars)
+  it('should generate a random API key with default length', () => {
       const apiKey = generateApiKey();
       // Default length is 32 bytes, which is 43 characters in base64url
       expect(apiKey).toHaveLength(43);
@@ -18,7 +25,8 @@ describe('API Key Generation', () => {
       expect(apiKey).toMatch(/^[A-Za-z0-9_-]+$/); 
     });
 
-    it('should generate a random API key with custom length', () => {
+  // Should generate a random API key of custom byte length
+  it('should generate a random API key with custom length', () => {
       const length = 16; // 16 bytes
       const apiKey = generateApiKey(length);
       // 16 bytes is 22 characters in base64url (rounded up from 21.33)
@@ -26,15 +34,18 @@ describe('API Key Generation', () => {
       expect(apiKey).toMatch(/^[A-Za-z0-9_-]+$/);
     });
 
-    it('should generate different keys on each call', () => {
+  // Should generate different keys on each call (randomness)
+  it('should generate different keys on each call', () => {
       const key1 = generateApiKey();
       const key2 = generateApiKey();
       expect(key1).not.toBe(key2);
     });
   });
 
+  // Tests for the generateUniqueApiKey function
   describe('generateUniqueApiKey', () => {
-    it('should generate a unique API key with default prefix', () => {
+  // Should generate a unique API key with the default 'dv' prefix
+  it('should generate a unique API key with default prefix', () => {
       const userId = '123456';
       const apiKey = generateUniqueApiKey(userId);
       
@@ -54,7 +65,8 @@ describe('API Key Generation', () => {
       expect(parts[2]).toMatch(/^[A-Za-z0-9_-]+$/);
     });
 
-    it('should generate a unique API key with custom prefix', () => {
+  // Should generate a unique API key with a custom prefix
+  it('should generate a unique API key with custom prefix', () => {
       const userId = '123456';
       const prefix = 'test';
       const apiKey = generateUniqueApiKey(userId, prefix);
@@ -66,7 +78,8 @@ describe('API Key Generation', () => {
       expect(parts[0]).toBe('test');
     });
 
-    it('should generate different keys for the same user', () => {
+  // Should generate different keys for the same user (random part)
+  it('should generate different keys for the same user', () => {
       const userId = '123456';
       const key1 = generateUniqueApiKey(userId);
       const key2 = generateUniqueApiKey(userId);
@@ -74,8 +87,10 @@ describe('API Key Generation', () => {
     });
   });
 
+  // Tests for the hashApiKey function
   describe('hashApiKey', () => {
-    it('should hash an API key consistently', () => {
+  // Should hash an API key consistently (same input, same output)
+  it('should hash an API key consistently', () => {
       const apiKey = 'dv_test_key';
       const hash = hashApiKey(apiKey);
       
@@ -88,15 +103,18 @@ describe('API Key Generation', () => {
       expect(hash).toBe(hash2);
     });
 
-    it('should produce different hashes for different keys', () => {
+  // Should produce different hashes for different API keys
+  it('should produce different hashes for different keys', () => {
       const hash1 = hashApiKey('key1');
       const hash2 = hashApiKey('key2');
       expect(hash1).not.toBe(hash2);
     });
   });
 
+  // Tests for the maskApiKey function
   describe('maskApiKey', () => {
-    it('should mask an API key with default visible characters', () => {
+  // Should mask an API key, showing only the last 8 characters by default
+  it('should mask an API key with default visible characters', () => {
       const apiKey = 'dv_1234567890abcdefghijklmnopqrstuvwxyz';
       const masked = maskApiKey(apiKey);
       
@@ -106,7 +124,8 @@ describe('API Key Generation', () => {
       expect(masked).toHaveLength(apiKey.length);
     });
 
-    it('should mask an API key with custom visible characters', () => {
+  // Should mask an API key, showing a custom number of visible characters
+  it('should mask an API key with custom visible characters', () => {
       const apiKey = 'dv_1234567890abcdefghijklmnopqrstuvwxyz';
       const visibleChars = 4;
       const masked = maskApiKey(apiKey, visibleChars);
@@ -117,7 +136,8 @@ describe('API Key Generation', () => {
       expect(masked).toHaveLength(apiKey.length);
     });
 
-    it('should handle short API keys', () => {
+  // Should handle short API keys (all masked if shorter than visible chars)
+  it('should handle short API keys', () => {
       const apiKey = 'short';
       const masked = maskApiKey(apiKey, 8);
       
@@ -127,8 +147,10 @@ describe('API Key Generation', () => {
     });
   });
 
+  // Tests for the isValidApiKeyFormat function
   describe('isValidApiKeyFormat', () => {
-    it('should validate correctly formatted API keys', () => {
+  // Should validate correctly formatted API keys (prefix, timestamp, random part)
+  it('should validate correctly formatted API keys', () => {
       // Generate a valid key with current timestamp
       const validKey = generateUniqueApiKey('test-user');
       expect(isValidApiKeyFormat(validKey)).toBe(true);
@@ -146,7 +168,8 @@ describe('API Key Generation', () => {
       });
     });
 
-    it('should reject invalid API key formats', () => {
+  // Should reject API keys with invalid format (missing parts, invalid chars, etc.)
+  it('should reject invalid API key formats', () => {
       const invalidKeys = [
         '', // Empty
         'no_underscores',
@@ -163,7 +186,8 @@ describe('API Key Generation', () => {
       });
     });
     
-    it('should reject keys with invalid timestamps', () => {
+  // Should reject API keys with invalid or future timestamps
+  it('should reject keys with invalid timestamps', () => {
       const currentTimestamp = Date.now();
       const futureTimestamp = (currentTimestamp + 1000000).toString(36); // Far future
       const invalidTimestampKeys = [
@@ -181,8 +205,10 @@ describe('API Key Generation', () => {
     });
   });
 
+  // Tests for the generateMultipleApiKeys function
   describe('generateMultipleApiKeys', () => {
-    it('should generate the requested number of API keys', () => {
+  // Should generate the requested number of API keys, all valid and unique
+  it('should generate the requested number of API keys', () => {
       const count = 5;
       const userId = '123456';
       const keys = generateMultipleApiKeys(count, userId);
@@ -196,7 +222,8 @@ describe('API Key Generation', () => {
       });
     });
 
-    it('should generate unique keys', () => {
+  // Should generate unique API keys in bulk
+  it('should generate unique keys', () => {
       const count = 10;
       const userId = '123456';
       const keys = generateMultipleApiKeys(count, userId);
@@ -206,7 +233,8 @@ describe('API Key Generation', () => {
       expect(uniqueKeys.size).toBe(count);
     });
 
-    it('should handle zero count', () => {
+  // Should handle zero count (returns empty array)
+  it('should handle zero count', () => {
       const keys = generateMultipleApiKeys(0, '123456');
       expect(keys).toHaveLength(0);
     });
