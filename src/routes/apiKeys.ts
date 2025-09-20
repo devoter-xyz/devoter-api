@@ -187,13 +187,32 @@ export default async function apiKeysRoute(fastify: FastifyInstance) {
       }
 
       // Return masked API keys with metadata
-      const apiKeys = user.apiKeys.map((key) => ({
-        id: key.id,
-        key: maskApiKey(key.key), // Use our utility function to mask the key
-        createdAt: key.createdAt.toISOString(),
-        totalUsed: key.totalUsed,
-        status: key.status,
-      }));
+      interface ApiKeyResponse {
+        id: string;
+        key: string;
+        createdAt: string;
+        totalUsed?: number;
+        status: string;
+      }
+
+      const apiKeys: ApiKeyResponse[] = user.apiKeys.map((key: {
+        id: string;
+        key: string;
+        createdAt: Date;
+        totalUsed?: number;
+        status: string;
+      }): ApiKeyResponse => {
+        const apiKeyObj: ApiKeyResponse = {
+          id: key.id,
+          key: maskApiKey(key.key),
+          createdAt: key.createdAt.toISOString(),
+          status: key.status,
+        };
+        if (key.totalUsed !== undefined) {
+          apiKeyObj.totalUsed = key.totalUsed;
+        }
+        return apiKeyObj;
+      });
 
       return reply.status(HttpStatusCode.OK).send({
         success: true,
