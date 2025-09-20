@@ -126,6 +126,65 @@ describe('Input Validation', () => {
       expect(result.isValid).toBe(false);
       expect(result.error).toBe('Message too long (max 1000 characters)');
     });
+    
+    it('should reject input with extra unexpected fields', () => {
+      const input = {
+        walletAddress: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+        message: 'test',
+        signature: '0x' + '1'.repeat(130),
+        extraField: 'unexpected',
+      };
+      // Should still be valid, as extra fields are ignored
+      const result = validateWalletAuthInput(input);
+      expect(result.isValid).toBe(true);
+      expect(result.error).toBeUndefined();
+    });
+
+    it('should reject input with null fields', () => {
+      const input = {
+        walletAddress: null,
+        message: null,
+        signature: null,
+      };
+      const result = validateWalletAuthInput(input);
+      expect(result.isValid).toBe(false);
+      expect(result.error).toBe('walletAddress, message, and signature must be strings');
+    });
+
+    it('should reject input with nested objects as fields', () => {
+      const input = {
+        walletAddress: { address: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266' },
+        message: { text: 'test' },
+        signature: { sig: '0x' + '1'.repeat(130) },
+      };
+      const result = validateWalletAuthInput(input);
+      expect(result.isValid).toBe(false);
+      expect(result.error).toBe('walletAddress, message, and signature must be strings');
+    });
+
+    it('should reject input with array as value for fields', () => {
+      const input = {
+        walletAddress: ['0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266'],
+        message: ['test'],
+        signature: ['0x' + '1'.repeat(130)],
+      };
+      const result = validateWalletAuthInput(input);
+      expect(result.isValid).toBe(false);
+      expect(result.error).toBe('walletAddress, message, and signature must be strings');
+    });
+
+    it('should reject deeply nested input object', () => {
+      const input = {
+        walletAddress: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+        message: 'test',
+        signature: '0x' + '1'.repeat(130),
+        nested: { foo: { bar: 123 } },
+      };
+      // Should still be valid, as extra fields are ignored
+      const result = validateWalletAuthInput(input);
+      expect(result.isValid).toBe(true);
+      expect(result.error).toBeUndefined();
+    });
   });
 
   describe('validateSignatureFormat', () => {
