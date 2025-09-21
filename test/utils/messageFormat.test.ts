@@ -6,7 +6,7 @@ describe('Message Format Validation', () => {
   const validSignature = '0x' + '1'.repeat(130);
 
   describe('Basic message validation', () => {
-    it('should accept valid plain text messages', () => {
+  it('should return valid for plain text messages', () => {
       const validMessages = [
         'Simple message',
         'Message with numbers 123',
@@ -27,7 +27,7 @@ describe('Message Format Validation', () => {
       });
     });
 
-    it('should accept messages with control characters (current implementation)', () => {
+  it('should return valid for messages with control characters (current implementation)', () => {
       const messagesWithControlChars = [
         'Message with newline\n',
         'Message with tab\t',
@@ -55,7 +55,7 @@ describe('Message Format Validation', () => {
   });
 
   describe('Message content validation', () => {
-    it('should handle messages with JSON content', () => {
+  it('should return valid for messages with JSON content', () => {
       const jsonMessages = [
         JSON.stringify({ action: 'login', timestamp: Date.now() }),
         JSON.stringify({ data: { userId: 123, role: 'admin' } }),
@@ -74,7 +74,7 @@ describe('Message Format Validation', () => {
       });
     });
 
-    it('should handle messages with URL content', () => {
+  it('should return valid for messages with URL content', () => {
       const urlMessages = [
         'https://example.com',
         'http://localhost:3000/api/auth?token=123',
@@ -93,7 +93,7 @@ describe('Message Format Validation', () => {
       });
     });
 
-    it('should handle messages with timestamp content', () => {
+  it('should return valid for messages with timestamp content', () => {
       const timestampMessages = [
         `Login request at ${Date.now()}`,
         `Verify my account: ${new Date().toISOString()}`,
@@ -114,7 +114,7 @@ describe('Message Format Validation', () => {
   });
 
   describe('Message security validation', () => {
-    it('should accept messages with potential XSS content (current implementation)', () => {
+  it('should return valid for messages with potential XSS content (current implementation)', () => {
       const xssMessages = [
         '<script>alert("XSS")</script>',
         'javascript:alert("XSS")',
@@ -137,7 +137,7 @@ describe('Message Format Validation', () => {
 
     });
 
-    it('should accept messages with potential SQL injection content (current implementation)', () => {
+  it('should return valid for messages with potential SQL injection content (current implementation)', () => {
       const sqlInjectionMessages = [
         "' OR '1'='1",
         "'; DROP TABLE users; --",

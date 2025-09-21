@@ -11,7 +11,7 @@ describe("Ethereum Address Validation", () => {
   // Tests for the validateAddressFormat function (simple regex check)
   describe("validateAddressFormat", () => {
   // Should validate correct Ethereum address formats (regex only)
-  it("should validate correct address format", () => {
+  it("should return true for valid Ethereum address format (regex only)", () => {
       const validAddresses = [
         "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", // Mixed case
         "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266", // Lowercase
@@ -26,7 +26,7 @@ describe("Ethereum Address Validation", () => {
     });
 
   // Should reject invalid Ethereum address formats (regex only)
-  it("should reject invalid address formats", () => {
+  it("should return false for invalid Ethereum address formats (regex only)", () => {
       const invalidAddresses = [
         "0x123", // Too short
         "not-an-address", // Not hex
@@ -52,7 +52,7 @@ describe("Ethereum Address Validation", () => {
   // Tests for the isValidEthereumAddress function (checksum and format)
   describe("isValidEthereumAddress", () => {
   // Should validate correct Ethereum addresses, including checksummed, zero, and case-insensitive
-  it("should validate correct Ethereum addresses with checksum", () => {
+  it("should return true for valid Ethereum addresses (checksum, zero, case-insensitive)", () => {
       const validAddresses = [
         // Valid checksummed addresses
         "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
@@ -72,7 +72,7 @@ describe("Ethereum Address Validation", () => {
     });
 
   // Should reject invalid Ethereum addresses (bad format, prefix, or type)
-  it("should reject invalid Ethereum addresses", () => {
+  it("should return false for invalid Ethereum addresses (bad format, prefix, or type)", () => {
       const invalidAddresses = [
         "0x123", // Too short
         "not-an-address", // Not hex
@@ -101,7 +101,7 @@ describe("Ethereum Address Validation", () => {
     });
 
   // Should handle edge cases (empty, null, undefined, non-string)
-  it("should handle edge cases correctly", () => {
+  it("should return false for edge cases (empty, null, undefined, non-string)", () => {
       // These should be invalid
       expect(isValidEthereumAddress("")).toBe(false);
       expect(isValidEthereumAddress("0x")).toBe(false);
@@ -119,7 +119,7 @@ describe("Ethereum Address Validation", () => {
   // Comparison tests between validateAddressFormat and isValidEthereumAddress
   describe("Comparison between validation functions", () => {
   // Should show differences between simple regex and ethers.js validation
-  it("should show differences between simple regex and ethers validation", () => {
+  it("should compare simple regex and ethers.js validation for Ethereum addresses", () => {
       // Both functions should accept valid addresses
       const validAddress = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266";
       expect(validateAddressFormat(validAddress)).toBe(true);
