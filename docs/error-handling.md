@@ -12,25 +12,6 @@ The error handling system is built around these key components:
 
 The `ApiError` class standardizes error creation and propagation. It typically includes:
 
-```typescript
-class ApiError extends Error {
-  status: number;
-  code: string;
-  details?: Record<string, any>;
-
-  constructor(message: string, status: number, code: string, details?: Record<string, any>) {
-    super(message);
-    this.status = status;
-    this.code = code;
-    this.details = details;
-  }
-
-  static notFound(message: string, code = "NOT_FOUND", details?: any) {
-    return new ApiError(message, 404, code, details);
-  }
-  // ...other static helpers for badRequest, unauthorized, etc.
-}
-```
 
 Extend or customize this class as needed for your use case.
 2. **HTTP Status Codes**: Well-defined status codes used consistently across all endpoints
