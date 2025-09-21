@@ -3,7 +3,7 @@ import { validateWalletAuthInput, validateSignatureFormat, validateAddressFormat
 
 describe('Input Validation', () => {
   describe('validateWalletAuthInput', () => {
-    it('should validate correct input format', () => {
+  it('should return valid for correct wallet authentication input', () => {
       const validInput = {
         walletAddress: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
         message: 'Test message',
@@ -14,7 +14,7 @@ describe('Input Validation', () => {
       expect(result.error).toBeUndefined();
     });
 
-    it('should reject non-object input', () => {
+  it('should reject non-object or primitive input (null, undefined, number, string, array, boolean)', () => {
       const inputs = [null, undefined, 42, 'string', [], true];
       inputs.forEach(input => {
         const result = validateWalletAuthInput(input);
@@ -23,7 +23,7 @@ describe('Input Validation', () => {
       });
     });
 
-    it('should reject missing required fields', () => {
+  it('should reject input missing one or more required fields', () => {
       const incompleteInputs = [
         { message: 'test', signature: '0x' + '1'.repeat(130) },
         { walletAddress: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266', signature: '0x' + '1'.repeat(130) },
@@ -37,7 +37,7 @@ describe('Input Validation', () => {
       });
     });
 
-    it('should reject invalid field types', () => {
+  it('should reject input where walletAddress, message, or signature are not strings', () => {
       const invalidTypeInputs = [
         { walletAddress: 123, message: 'test', signature: '0x' + '1'.repeat(130) },
         { walletAddress: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266', message: 42, signature: '0x' + '1'.repeat(130) },
@@ -51,7 +51,7 @@ describe('Input Validation', () => {
       });
     });
 
-    it('should reject invalid wallet address format', () => {
+  it('should reject input with invalid wallet address format', () => {
       const invalidAddresses = [
         '123', // Too short
         'not-an-address', // Not hex
@@ -73,7 +73,7 @@ describe('Input Validation', () => {
       });
     });
 
-    it('should reject invalid signature format', () => {
+  it('should reject input with invalid signature format', () => {
       const invalidSignatures = [
         '0x123', // Too short
         'not-a-signature', // Not hex
@@ -96,7 +96,7 @@ describe('Input Validation', () => {
       });
     });
 
-    it('should reject empty messages', () => {
+  it('should reject input with empty or whitespace-only message', () => {
       const input = {
         walletAddress: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
         message: '',
@@ -116,7 +116,7 @@ describe('Input Validation', () => {
       expect(whitespaceResult.error).toBe('Message cannot be empty');
     });
 
-    it('should reject too long messages', () => {
+  it('should reject input with message exceeding 1000 characters', () => {
       const input = {
         walletAddress: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
         message: 'a'.repeat(1001),
@@ -127,7 +127,7 @@ describe('Input Validation', () => {
       expect(result.error).toBe('Message too long (max 1000 characters)');
     });
     
-    it('should reject input with extra unexpected fields', () => {
+  it('should allow input with extra unexpected fields (ignored)', () => {
       const input = {
         walletAddress: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
         message: 'test',
@@ -140,7 +140,7 @@ describe('Input Validation', () => {
       expect(result.error).toBeUndefined();
     });
 
-    it('should reject input with null fields', () => {
+  it('should reject input where fields are null', () => {
       const input = {
         walletAddress: null,
         message: null,
@@ -151,7 +151,7 @@ describe('Input Validation', () => {
       expect(result.error).toBe('walletAddress, message, and signature must be strings');
     });
 
-    it('should reject input with nested objects as fields', () => {
+  it('should reject input where fields are nested objects', () => {
       const input = {
         walletAddress: { address: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266' },
         message: { text: 'test' },
@@ -162,7 +162,7 @@ describe('Input Validation', () => {
       expect(result.error).toBe('walletAddress, message, and signature must be strings');
     });
 
-    it('should reject input with array as value for fields', () => {
+  it('should reject input where fields are arrays', () => {
       const input = {
         walletAddress: ['0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266'],
         message: ['test'],
@@ -173,7 +173,7 @@ describe('Input Validation', () => {
       expect(result.error).toBe('walletAddress, message, and signature must be strings');
     });
 
-    it('should reject deeply nested input object', () => {
+  it('should allow deeply nested input object as long as required fields are valid', () => {
       const input = {
         walletAddress: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
         message: 'test',
@@ -188,12 +188,12 @@ describe('Input Validation', () => {
   });
 
   describe('validateSignatureFormat', () => {
-    it('should validate correct signature format', () => {
+  it('should return true for valid Ethereum signature format', () => {
       const validSignature = '0x' + '1'.repeat(130);
       expect(validateSignatureFormat(validSignature)).toBe(true);
     });
 
-    it('should reject invalid signature formats', () => {
+  it('should return false for invalid Ethereum signature formats', () => {
       const invalidSignatures = [
         '0x123', // Too short
         'not-a-signature', // Not hex
@@ -211,7 +211,7 @@ describe('Input Validation', () => {
   });
 
   describe('validateAddressFormat', () => {
-    it('should validate correct address format', () => {
+  it('should return true for valid Ethereum address format', () => {
       const validAddresses = [
         '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266', // Mixed case
         '0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266', // Lowercase
@@ -223,7 +223,7 @@ describe('Input Validation', () => {
       });
     });
 
-    it('should reject invalid address formats', () => {
+  it('should return false for invalid Ethereum address formats', () => {
       const invalidAddresses = [
         '0x123', // Too short
         'not-an-address', // Not hex

@@ -24,7 +24,7 @@ describe("Basic Signature Verification", () => {
    * Test that a valid signature from a known wallet address is accepted.
    * This ensures the verifySignature function works for correct inputs.
    */
-  it("should return true for a valid signature from a known wallet", async () => {
+  it("should return true for a valid signature from a known wallet address", async () => {
     // Create a wallet with a known private key for consistent testing
     const wallet = new ethers.Wallet(
       "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
@@ -45,7 +45,7 @@ describe("Basic Signature Verification", () => {
    * Test that invalid signatures (wrong message or wrong address) are rejected.
    * This checks that the function does not falsely validate incorrect signatures.
    */
-  it("should return false for invalid signatures with wrong message or address", async () => {
+  it("should return false for invalid signatures (wrong message or wrong address)", async () => {
     // Create a wallet for signing
     const wallet = new ethers.Wallet(
       "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
@@ -81,7 +81,7 @@ describe("Basic Signature Verification", () => {
    * Test that the function is case-insensitive with respect to wallet addresses.
    * Ethereum addresses can be checksummed, lowercase, uppercase, or mixed case.
    */
-  it("should handle case sensitivity correctly in wallet addresses", async () => {
+  it("should be case-insensitive for wallet addresses (mixed, lower, upper, checksum)", async () => {
     // Create a wallet for signing
     const wallet = new ethers.Wallet(
       "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
@@ -134,7 +134,7 @@ describe("Basic Signature Verification", () => {
    * Test signature verification with real-world Ethereum address formats.
    * Ensures compatibility with various address representations.
    */
-  it("should work with real Ethereum wallet address formats", async () => {
+  it("should work with various real-world Ethereum wallet address formats", async () => {
     // Test with a well-known Ethereum address (Vitalik's public address)
     const realWallet = new ethers.Wallet(
       "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
@@ -160,7 +160,7 @@ describe("Basic Signature Verification", () => {
    * Test edge cases for signature recovery, such as invalid, empty, or too-short signatures.
    * Ensures the function fails gracefully for malformed input.
    */
-  it("should handle signature recovery edge cases", async () => {
+  it("should return false for signature recovery edge cases (invalid, empty, too short)", async () => {
     const wallet = new ethers.Wallet(
       "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
     );
@@ -198,7 +198,7 @@ describe("Timestamp Signature Verification", () => {
    * Test that timestamped signature verification is case-insensitive for wallet addresses.
    * This ensures robust handling of address formats in time-based checks.
    */
-  it("should handle case sensitivity in wallet addresses with timestamp verification", async () => {
+  it("should be case-insensitive for wallet addresses in timestamped signature verification", async () => {
     const wallet = new ethers.Wallet(
       "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
     );
@@ -231,7 +231,7 @@ describe("Timestamp Signature Verification", () => {
    * Test that recent (non-expired) timestamped signatures are accepted.
    * Ensures the function allows valid, timely signatures.
    */
-  it("should validate recent timestamped signatures", async () => {
+  it("should return valid for recent (non-expired) timestamped signatures", async () => {
     const wallet = new ethers.Wallet(
       "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
     );
@@ -254,7 +254,7 @@ describe("Timestamp Signature Verification", () => {
    * Test that expired timestamped signatures are rejected.
    * Ensures the function enforces expiration windows.
    */
-  it("should reject expired timestamped signatures", async () => {
+  it("should return false for expired timestamped signatures", async () => {
     const wallet = new ethers.Wallet(
       "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
     );
@@ -279,7 +279,7 @@ describe("Timestamp Signature Verification", () => {
    * Test that signatures with a future timestamp are rejected.
    * Prevents accepting signatures that are not yet valid.
    */
-  it("should reject future timestamped signatures", async () => {
+  it("should return false for future timestamped signatures", async () => {
     const wallet = new ethers.Wallet(
       "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
     );
@@ -308,7 +308,7 @@ describe("Address Validation", () => {
    * Test that valid Ethereum addresses (checksummed and lowercase) are accepted,
    * and invalid addresses (wrong length, non-hex, bad checksum, etc.) are rejected.
    */
-  it("should validate Ethereum address formats correctly", () => {
+  it("should return true for valid Ethereum address formats and false for invalid ones", () => {
     // Valid addresses (ethers.js is strict about EIP-55 checksum)
     const validAddresses = [
       "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", // Mixed case (EIP-55 checksum)
