@@ -1,12 +1,38 @@
+
 # Error Handling in devoter-api
 
-This document explains the error handling strategy implemented in the devoter-api service.
+Robust error handling is critical for building reliable APIs. The `devoter-api` service implements a comprehensive error handling strategy to ensure predictable, actionable, and secure responses for both developers and API consumers. This document details the approach, patterns, and best practices used.
 
 ## Architecture
 
 The error handling system is built around these key components:
 
-1. **ApiError Class**: A custom error class that extends JavaScript's native Error
+1. **ApiError Class**: A custom error class that extends JavaScript's native Error, providing structured error information
+## ApiError Class Structure
+
+The `ApiError` class standardizes error creation and propagation. It typically includes:
+
+```typescript
+class ApiError extends Error {
+  status: number;
+  code: string;
+  details?: Record<string, any>;
+
+  constructor(message: string, status: number, code: string, details?: Record<string, any>) {
+    super(message);
+    this.status = status;
+    this.code = code;
+    this.details = details;
+  }
+
+  static notFound(message: string, code = "NOT_FOUND", details?: any) {
+    return new ApiError(message, 404, code, details);
+  }
+  // ...other static helpers for badRequest, unauthorized, etc.
+}
+```
+
+Extend or customize this class as needed for your use case.
 2. **HTTP Status Codes**: Well-defined status codes used consistently across all endpoints
 3. **Error Response Format**: A consistent format for all API error responses
 4. **Global Error Handler**: Centralized handling of all errors
@@ -61,8 +87,62 @@ We use standardized error codes to help identify specific error conditions:
 1. Route handlers use `asyncHandler` to automatically catch exceptions
 2. Specific error conditions throw appropriate `ApiError` instances
 3. Global error handler processes all uncaught errors
-4. Prisma database errors are converted to appropriate API errors
-5. All errors are logged with request context for debugging
+4. Prisma/database errors are mapped to API errors (see below)
+5. All errors are logged with request context for debugging and traceability
+## Global Error Handler Example
+
+The global error handler ensures all errors are returned in the standard format and logs relevant context:
+
+```typescript
+app.setErrorHandler((err, req, res) => {
+  if (err instanceof ApiError) {
+    // Log error with request context
+    logger.error({ err, path: req.url, user: req.user }, "API error");
+    res.status(err.status).send({
+      success: false,
+      error: err.message,
+      code: err.code,
+      details: err.details || undefined,
+    });
+  } else {
+    // Handle unexpected errors
+    logger.error({ err, path: req.url }, "Unhandled error");
+    res.status(500).send({
+      success: false,
+      error: "Internal server error",
+      code: "INTERNAL_ERROR",
+    });
+  }
+});
+```
+
+## Prisma/Database Error Mapping
+
+Prisma errors (e.g., unique constraint violations) are caught and mapped to API errors:
+
+```typescript
+try {
+  await prisma.user.create({ ... });
+} catch (e) {
+  if (e.code === 'P2002') {
+    throw ApiError.conflict("Duplicate resource", "UNIQUE_CONSTRAINT_VIOLATION");
+  }
+  throw ApiError.internal("Database error", "DATABASE_ERROR");
+}
+```
+## Logging
+
+All errors are logged with relevant request context (user, endpoint, params) to aid debugging and monitoring. Use a structured logger (e.g., pino, winston) for best results.
+## Troubleshooting Common Errors
+
+| Scenario | Likely Cause | Resolution |
+|----------|-------------|------------|
+| 401 Unauthorized | Missing/invalid auth headers | Check `Authorization` header and signature |
+| 409 Conflict | Duplicate resource | Ensure unique fields (e.g., wallet) are not reused |
+| 429 Too Many Requests | Rate limit exceeded | Wait and retry after `retryAfter` seconds |
+| 500 Internal Error | Unexpected server error | Check logs for stack trace and context |
+
+If you encounter an error not listed here, consult the logs or contact the API maintainer.
 
 ## Example Usage
 

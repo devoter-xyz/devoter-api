@@ -1,4 +1,7 @@
+
 # Rate Limiting Documentation
+
+Rate limiting is essential for protecting APIs from abuse, ensuring fair access, and maintaining service reliability. The `devoter-api` uses a flexible, secure rate limiting strategy tailored to endpoint sensitivity and user context.
 
 ## Overview
 
@@ -8,10 +11,55 @@ The devoter-api implements comprehensive rate limiting to prevent abuse and ensu
 
 ### Key Generation
 Rate limits are applied based on a combination of:
-- IP address (always included)
-- Wallet address (when available for authenticated endpoints)
+- **IP address** (always included)
+- **Wallet address** (when available for authenticated endpoints)
 
-This provides more granular control while preventing both IP-based and wallet-based abuse.
+This dual-key approach prevents both IP-based and wallet-based abuse, and allows for fine-grained control.
+
+**Example key generation logic:**
+```typescript
+function getRateLimitKey(req) {
+  const ip = req.ip;
+  const wallet = req.user?.walletAddress;
+  return wallet ? `${ip}:${wallet}` : ip;
+}
+```
+## Customizing Per-Route Rate Limits
+
+You can set different rate limits for each route using the Fastify plugin:
+
+```typescript
+fastify.register(require('@fastify/rate-limit'), {
+  max: 100,
+  timeWindow: '1 minute',
+  keyGenerator: getRateLimitKey,
+  // ...other options
+});
+
+fastify.route({
+  method: 'POST',
+  url: '/register',
+  config: {
+    rateLimit: { max: 5, timeWindow: '1 minute' }
+  },
+  handler: registerHandler
+});
+```
+## Example Middleware Configuration
+
+```typescript
+import rateLimit from '@fastify/rate-limit';
+fastify.register(rateLimit, {
+  global: false, // allow per-route overrides
+  keyGenerator: getRateLimitKey,
+  errorResponseBuilder: (req, context) => ({
+    success: false,
+    error: 'Rate limit exceeded',
+    message: `Too many requests. Try again in ${context.after} seconds.`,
+    retryAfter: context.after
+  })
+});
+```
 
 ### Rate Limit Configurations
 
@@ -96,7 +144,25 @@ Rate limit violations are logged for monitoring purposes. In production, conside
 ## Production Considerations
 
 For production deployment:
-1. Consider using Redis for rate limit storage in a distributed environment
+1. **Use Redis** for rate limit storage in distributed/multi-instance environments:
+   - Install and configure Redis
+   - Use `@fastify/rate-limit` with `redis` store:
+   ```typescript
+   fastify.register(require('@fastify/rate-limit'), {
+     redis: new Redis(process.env.REDIS_URL),
+     // ...other options
+   });
+   ```
 2. Monitor rate limit patterns and adjust as needed
-3. Implement additional security measures for persistent abusers
+3. Implement additional security measures for persistent abusers (e.g., IP bans)
 4. Set up monitoring and alerting for rate limit violations
+## Troubleshooting & FAQ
+
+| Problem | Possible Cause | Solution |
+|---------|---------------|----------|
+| All requests blocked | Misconfigured rate limit or key generator | Check per-route config and key logic |
+| Rate limit not enforced | Plugin not registered or wrong route config | Ensure plugin is loaded and route has correct settings |
+| High false positives | Shared IPs (e.g., proxies) | Consider using wallet or user ID in key |
+| Redis errors | Redis not running or misconfigured | Check Redis connection and logs |
+
+If you encounter persistent issues, review logs and verify your environment variables and plugin configuration.
