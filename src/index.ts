@@ -67,8 +67,10 @@ const start = async () => {
     // Register API routes
     // - /register: Handles user or entity registration
     // - /apiKeys: Handles API key management
+    // - /polls: Handles poll creation, voting, and results
     await server.register(import("./routes/register.js"));
     await server.register(import("./routes/apiKeys.js"));
+    await server.register(import("./routes/polls.js"));
 
     // Parse and validate the port from environment variables (default: 3000)
     const portStr = process.env.PORT || "3000";
