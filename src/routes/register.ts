@@ -9,7 +9,15 @@ import {
   HttpStatusCode,
 } from "../utils/errorHandler.js";
 
+
 const prisma = new PrismaClient();
+
+// Define the expected request body type for clarity and reusability
+type RegisterRequestBody = {
+  walletAddress: string;
+  message: string;
+  signature: string;
+};
 
 export default async function registerRoute(fastify: FastifyInstance) {
   // POST /register - Register a new user with wallet authentication
@@ -42,15 +50,15 @@ export default async function registerRoute(fastify: FastifyInstance) {
     },
     preHandler: verifyWalletSignature,
     handler: asyncHandler(async (request, reply) => {
-      const { walletAddress } = request.body as {
-        walletAddress: string;
-        message: string;
-        signature: string;
-      };
+
+      const { walletAddress } = request.body as RegisterRequestBody;
+      // Normalize input: trim and lowercase the wallet address
+      const normalizedWalletAddress = walletAddress.trim().toLowerCase();
+
 
       // Check if user already exists
       const existingUser = await prisma.apiUser.findUnique({
-        where: { walletAddress: walletAddress.toLowerCase() },
+        where: { walletAddress: normalizedWalletAddress },
       });
 
       if (existingUser) {
@@ -63,9 +71,10 @@ export default async function registerRoute(fastify: FastifyInstance) {
 
       try {
         // Create new user
+
         const newUser = await prisma.apiUser.create({
           data: {
-            walletAddress: walletAddress.toLowerCase(),
+            walletAddress: normalizedWalletAddress,
           },
         });
 
@@ -76,10 +85,12 @@ export default async function registerRoute(fastify: FastifyInstance) {
         });
       } catch (error) {
         // This will be caught by asyncHandler
+
+        // Handle race condition where user was created between our check and create
+        // This can happen if two requests for the same wallet address are processed simultaneously.
         if ((error as any)?.code === "P2002") {
-          // Handle race condition where user was created between our check and create
           const existingUser = await prisma.apiUser.findUnique({
-            where: { walletAddress: walletAddress.toLowerCase() },
+            where: { walletAddress: normalizedWalletAddress },
           });
 
           if (existingUser) {
