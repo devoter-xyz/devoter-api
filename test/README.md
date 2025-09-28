@@ -1,6 +1,6 @@
 # Testing in devoter-api
 
-This directory contains tests for the devoter-api service.
+This directory contains tests for the devoter-api service
 
 ## Structure
 
