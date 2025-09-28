@@ -9,8 +9,11 @@ The tests are organized to mirror the structure of the source code:
 ```
 test/
 ├── utils/         # Tests for utility functions
-│   ├── verifySignature.test.ts
-│   └── generateApiKey.test.ts (coming soon)
+│   ├── ethereumAddress.test.ts
+│   ├── generateApiKey.test.ts
+│   ├── messageFormat.test.ts
+│   ├── validation.test.ts
+│   └── verifySignature.test.ts
 ├── middleware/    # Tests for middleware (coming soon)
 ├── routes/        # Tests for API routes (coming soon)
 └── integration/   # Integration tests (coming soon)
