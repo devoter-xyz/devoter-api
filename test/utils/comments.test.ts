@@ -1,0 +1,153 @@
+import { describe, it, expect, beforeEach } from 'vitest';
+import Fastify, { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import commentsRoutes, { comments } from '../../src/routes/comments';
+
+// Helper to create a mock Fastify instance and register the plugin
+async function setupFastify() {
+  const fastify = Fastify();
+  // Manually inject the mock comments array into the plugin if needed, or ensure the plugin uses a way to reset it.
+  // For now, we'll assume the plugin directly uses the `comments` array defined in its scope,
+  // and we'll reset it here before each test.
+  await fastify.register(commentsRoutes);
+  return fastify;
+}
+
+describe('Comments Routes', () => {
+  let fastify: FastifyInstance;
+
+  beforeEach(async () => {
+    // Reset the comments array before each test
+    comments.length = 0; // Clear the array
+    fastify = await setupFastify();
+  });
+
+  describe('GET /poll/:pollId', () => {
+    it('should return an empty array if no comments exist for a poll', async () => {
+      const response = await fastify.inject({
+        method: 'GET',
+        url: '/poll/nonExistentPoll',
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(JSON.parse(response.payload)).toEqual([]);
+    });
+
+    it('should return comments for a specific poll', async () => {
+      // Manually add comments to the mock array
+      comments.push({
+        id: '1',
+        pollId: 'poll123',
+        user: 'userA',
+        comment: 'Comment 1 for poll 123',
+        createdAt: new Date(),
+      });
+      comments.push({
+        id: '2',
+        pollId: 'poll123',
+        user: 'userB',
+        comment: 'Comment 2 for poll 123',
+        createdAt: new Date(),
+      });
+      comments.push({
+        id: '3',
+        pollId: 'poll456',
+        user: 'userC',
+        comment: 'Comment for poll 456',
+        createdAt: new Date(),
+      });
+
+      const response = await fastify.inject({
+        method: 'GET',
+        url: '/poll/poll123',
+      });
+
+      expect(response.statusCode).toBe(200);
+      const payload = JSON.parse(response.payload);
+      expect(payload.length).toBe(2);
+      expect(payload[0].comment).toBe('Comment 1 for poll 123');
+      expect(payload[1].comment).toBe('Comment 2 for poll 123');
+    });
+  });
+
+  describe('POST /poll/:pollId', () => {
+    it('should successfully post a new comment', async () => {
+      const response = await fastify.inject({
+        method: 'POST',
+        url: '/poll/poll789',
+        payload: {
+          user: 'newUser',
+          comment: 'This is a new comment.',
+        },
+      });
+
+      expect(response.statusCode).toBe(201);
+      const payload = JSON.parse(response.payload);
+      expect(payload).toHaveProperty('id');
+      expect(payload.pollId).toBe('poll789');
+      expect(payload.user).toBe('newUser');
+      expect(payload.comment).toBe('This is a new comment.');
+      expect(comments.length).toBe(1); // Check if comment was added to the mock array
+    });
+
+    it('should return 400 if user is missing', async () => {
+      const response = await fastify.inject({
+        method: 'POST',
+        url: '/poll/poll789',
+        payload: {
+          comment: 'This is a new comment.',
+        },
+      });
+
+      expect(response.statusCode).toBe(400);
+      expect(JSON.parse(response.payload)).toEqual({ error: 'User and comment are required.' });
+      expect(comments.length).toBe(0);
+    });
+
+    it('should return 400 if comment is missing', async () => {
+      const response = await fastify.inject({
+        method: 'POST',
+        url: '/poll/poll789',
+        payload: {
+          user: 'newUser',
+        },
+      });
+
+      expect(response.statusCode).toBe(400);
+      expect(JSON.parse(response.payload)).toEqual({ error: 'User and comment are required.' });
+      expect(comments.length).toBe(0);
+    });
+  });
+
+  describe('DELETE /:id', () => {
+    it('should successfully delete an existing comment', async () => {
+      // Manually add a comment to delete
+      comments.push({
+        id: 'commentToDelete',
+        pollId: 'poll123',
+        user: 'userA',
+        comment: 'Comment to be deleted',
+        createdAt: new Date(),
+      });
+
+      const response = await fastify.inject({
+        method: 'DELETE',
+        url: '/commentToDelete',
+      });
+
+      expect(response.statusCode).toBe(204);
+      expect(response.payload).toBe(''); // 204 No Content should have an empty payload
+      expect(comments.length).toBe(0); // Check if comment was removed
+    });
+
+    it('should return 404 if the comment is not found', async () => {
+      const response = await fastify.inject({
+        method: 'DELETE',
+        url: '/nonExistentComment',
+      });
+
+      expect(response.statusCode).toBe(404);
+      expect(JSON.parse(response.payload)).toEqual({ error: 'Comment not found.' });
+      expect(comments.length).toBe(0);
+    });
+  });
+});
