@@ -2,7 +2,7 @@ import { FastifyInstance, FastifyPluginAsync } from 'fastify';
 import type { FastifyRequest, FastifyReply } from 'fastify';
 
 // In-memory store for comments (replace with DB in production)
-const comments: Array<{
+export const comments: Array<{
   id: string;
   pollId: string;
   user: string;
