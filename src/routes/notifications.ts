@@ -1,6 +1,12 @@
 import type { FastifyInstance, FastifyPluginOptions } from 'fastify';
 
-// In-memory store for notifications (replace with DB in production)
+// TODO: This module-level in-memory notifications array is unsafe for production.
+// It suffers from per-worker copies, unbounded growth, and data loss on restart.
+// Before deployment, replace this with a persistent store (e.g., PostgreSQL, Redis).
+// Implement a bounded retention strategy (e.g., max size, TTL) and pagination/limit support.
+// Refactor the code to use an async persistence layer (abstracted repository/service)
+// instead of directly accessing this mutable module-level state, ensuring clustered
+// workers share data and memory usage is controlled.
 const notifications: Array<{
   id: string;
   user: string;
