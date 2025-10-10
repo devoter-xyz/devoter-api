@@ -55,7 +55,7 @@ export const rateLimitErrorHandler = (request: FastifyRequest, context: any) => 
   return {
     statusCode: 429,
     error: 'Rate limit exceeded',
-    message: `Too many requests. Try again in ${Math.ceil(context.ttl / 1000)} seconds.`,
+    message: `Too many requests for ${request.url}. Try again in ${Math.ceil(context.ttl / 1000)} seconds.`,
     retryAfter: Math.ceil(context.ttl / 1000),
   };
 };
