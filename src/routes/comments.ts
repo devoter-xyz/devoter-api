@@ -1,4 +1,4 @@
-import { FastifyInstance, FastifyPluginAsync } from 'fastify';
+import type { FastifyInstance, FastifyPluginAsync } from 'fastify';
 import type { FastifyRequest, FastifyReply } from 'fastify';
 
 // In-memory store for comments (replace with DB in production)

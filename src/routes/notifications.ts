@@ -25,9 +25,15 @@ async function notificationsRoutes(fastify: FastifyInstance, options: FastifyPlu
   // POST /notifications - create a new notification
   fastify.post('/notifications', async (request, reply) => {
     const { user, message } = request.body as { user?: string; message?: string };
-    if (!user || !message) {
+
+    if (!user) {
       reply.status(400);
-      return { error: 'User and message are required.' };
+      return { error: 'User is required.' };
+    }
+
+    if (!message) {
+      reply.status(400);
+      return { error: 'Message is required.' };
     }
     const newNotification = {
       id: Math.random().toString(36).substr(2, 9),
