@@ -16,7 +16,7 @@ const commentsRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) => {
   fastify.get('/poll/:pollId', async (request: FastifyRequest<{ Params: { pollId: string } }>, reply: FastifyReply) => {
     const { pollId } = request.params;
     const pollComments = comments.filter(c => c.pollId === pollId);
-    return pollComments;
+    return { success: true, comments: pollComments };
   });
 
   // Post a new comment to a poll
