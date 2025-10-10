@@ -75,6 +75,10 @@ export default async function pollsRoute(fastify: FastifyInstance) {
   // GET /polls - Get all polls
   fastify.get("/polls", {
     schema: {
+      querystring: Type.Object({
+        limit: Type.Integer({ minimum: 1, default: 50 }),
+        offset: Type.Integer({ minimum: 0, default: 0 }),
+      }),
       response: {
         200: Type.Object({
           success: Type.Literal(true),
@@ -96,8 +100,12 @@ export default async function pollsRoute(fastify: FastifyInstance) {
       rateLimit: rateLimitConfigs.health,
     },
   }, asyncHandler(async (request, reply) => {
+    const { limit, offset } = request.query as { limit: number; offset: number };
+
     const polls = await prisma.poll.findMany({
       orderBy: { createdAt: 'desc' },
+      take: limit,
+      skip: offset,
     });
 
     const formattedPolls = polls.map((poll: any) => ({
