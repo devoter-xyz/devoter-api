@@ -29,7 +29,7 @@ describe('Comments Routes', () => {
       });
 
       expect(response.statusCode).toBe(200);
-      expect(JSON.parse(response.payload)).toEqual([]);
+      expect(JSON.parse(response.payload)).toEqual({ success: true, comments: [] });
     });
 
     it('should return comments for a specific poll', async () => {
@@ -63,9 +63,9 @@ describe('Comments Routes', () => {
 
       expect(response.statusCode).toBe(200);
       const payload = JSON.parse(response.payload);
-      expect(payload.length).toBe(2);
-      expect(payload[0].comment).toBe('Comment 1 for poll 123');
-      expect(payload[1].comment).toBe('Comment 2 for poll 123');
+      expect(payload.comments.length).toBe(2);
+      expect(payload.comments[0].comment).toBe('Comment 1 for poll 123');
+      expect(payload.comments[1].comment).toBe('Comment 2 for poll 123');
     });
   });
 
