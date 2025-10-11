@@ -24,7 +24,9 @@ export default async function registerRoute(fastify: FastifyInstance) {
   fastify.post("/register", {
     schema: {
       body: Type.Object({
-        walletAddress: Type.RegExp(/^0x[a-fA-F0-9]{40}$/),
+        walletAddress: Type.RegExp(/^0x[a-fA-F0-9]{40}$/, {
+          transform: (value) => value.trim().toLowerCase(),
+        }),
         message: Type.String({ minLength: 1, maxLength: 1000 }),
         signature: Type.RegExp(/^0x[a-fA-F0-9]{130}$/),
       }),
