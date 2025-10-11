@@ -150,7 +150,7 @@ export default async function apiKeysRoute(fastify: FastifyInstance) {
     },
     preHandler: asyncHandler(async (request, reply) => {
       // Custom validation for GET request with headers
-      const walletAddress = request.headers["x-wallet-address"] as string;
+      const walletAddress = (request.headers["x-wallet-address"] as string).trim().toLowerCase();
       const message = request.headers["x-message"] as string;
       const signature = request.headers["x-signature"] as string;
 
@@ -168,7 +168,7 @@ export default async function apiKeysRoute(fastify: FastifyInstance) {
       return verifyWalletSignature(request, reply);
     }),
     handler: asyncHandler(async (request, reply) => {
-      const walletAddress = request.headers["x-wallet-address"] as string;
+      const walletAddress = (request.headers["x-wallet-address"] as string).trim().toLowerCase();
 
       // Find the user and their API keys
       const user = await prisma.apiUser.findUnique({
