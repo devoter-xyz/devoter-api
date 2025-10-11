@@ -37,11 +37,12 @@ export async function verifyWalletSignature(
   }
 
   // Verify signature and freshness (prevents replay)
+  const MAX_SIGNATURE_AGE_MINUTES = parseInt(process.env.MAX_SIGNATURE_AGE_MINUTES || '5', 10);
   const { isValid, error } = verifySignatureWithTimestamp(
     message,
     signature,
     walletAddress,
-    5 // maxAgeMinutes; consider making this configurable
+    MAX_SIGNATURE_AGE_MINUTES
   );
   if (!isValid) {
     throw ApiError.unauthorized(
