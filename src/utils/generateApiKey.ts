@@ -3,10 +3,23 @@ import * as crypto from 'crypto';
 /**
  * Generate a secure API key using cryptographic random bytes
  * @param length - Length of the API key (default: 32)
+ * @param seed - Optional seed for deterministic key generation (for testing)
  * @returns Base64URL encoded API key
  */
-export function generateApiKey(length: number = 32): string {
-  const buffer = crypto.randomBytes(length);
+export function generateApiKey(length: number = 32, seed?: string): string {
+  let buffer: Buffer;
+  if (seed) {
+    // Use a seeded hash for deterministic output in testing
+    buffer = crypto.createHash('sha256').update(seed).digest().slice(0, length);
+    // If the seed hash is shorter than length, repeat it or pad with zeros.
+    // For simplicity and common test cases, slicing is usually sufficient.
+    // If length is greater than 32 (SHA256 output), it will be padded with zeros.
+    if (buffer.length < length) {
+      buffer = Buffer.concat([buffer, Buffer.alloc(length - buffer.length, 0)]);
+    }
+  } else {
+    buffer = crypto.randomBytes(length);
+  }
   return buffer.toString('base64url');
 }
 
