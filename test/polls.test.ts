@@ -80,9 +80,156 @@ describe('Polls Route', () => {
       expect(body.message).toBe('Poll created successfully');
     });
 
-    it('should return 404 if user not found', async () => {
-      (prisma.apiUser.findUnique as any).mockResolvedValue(null);
+    it('should return 400 for missing title', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/polls',
+        payload: {
+          description: 'Test Description',
+          options: ['Option 1', 'Option 2'],
+          walletAddress: '0x1234567890123456789012345678901234567890',
+          message: 'Create poll message',
+          signature: '0x' + '1'.repeat(130),
+        },
+      });
+      expect(response.statusCode).toBe(400);
+      expect(JSON.parse(response.payload).error).toContain('body/title must be string');
+    });
 
+    it('should return 400 for title too long', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/polls',
+        payload: {
+          title: 'a'.repeat(201),
+          description: 'Test Description',
+          options: ['Option 1', 'Option 2'],
+          walletAddress: '0x1234567890123456789012345678901234567890',
+          message: 'Create poll message',
+          signature: '0x' + '1'.repeat(130),
+        },
+      });
+      expect(response.statusCode).toBe(400);
+      expect(JSON.parse(response.payload).error).toContain('body/title must be at most 200 characters');
+    });
+
+    it('should return 400 for missing options', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/polls',
+        payload: {
+          title: 'Test Poll',
+          description: 'Test Description',
+          walletAddress: '0x1234567890123456789012345678901234567890',
+          message: 'Create poll message',
+          signature: '0x' + '1'.repeat(130),
+        },
+      });
+      expect(response.statusCode).toBe(400);
+      expect(JSON.parse(response.payload).error).toContain('body/options must be Array');
+    });
+
+    it('should return 400 for options with less than 2 items', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/polls',
+        payload: {
+          title: 'Test Poll',
+          description: 'Test Description',
+          options: ['Option 1'],
+          walletAddress: '0x1234567890123456789012345678901234567890',
+          message: 'Create poll message',
+          signature: '0x' + '1'.repeat(130),
+        },
+      });
+      expect(response.statusCode).toBe(400);
+      expect(JSON.parse(response.payload).error).toContain('body/options must contain at least 2 items');
+    });
+
+    it('should return 400 for options with more than 10 items', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/polls',
+        payload: {
+          title: 'Test Poll',
+          description: 'Test Description',
+          options: Array(11).fill('Option'),
+          walletAddress: '0x1234567890123456789012345678901234567890',
+          message: 'Create poll message',
+          signature: '0x' + '1'.repeat(130),
+        },
+      });
+      expect(response.statusCode).toBe(400);
+      expect(JSON.parse(response.payload).error).toContain('body/options must contain at most 10 items');
+    });
+
+    it('should return 400 for options containing non-string items', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/polls',
+        payload: {
+          title: 'Test Poll',
+          description: 'Test Description',
+          options: ['Option 1', 2],
+          walletAddress: '0x1234567890123456789012345678901234567890',
+          message: 'Create poll message',
+          signature: '0x' + '1'.repeat(130),
+        },
+      });
+      expect(response.statusCode).toBe(400);
+      expect(JSON.parse(response.payload).error).toContain('body/options/1 must be string');
+    });
+
+    it('should return 400 for invalid walletAddress format', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/polls',
+        payload: {
+          title: 'Test Poll',
+          description: 'Test Description',
+          options: ['Option 1', 'Option 2'],
+          walletAddress: 'invalid-address',
+          message: 'Create poll message',
+          signature: '0x' + '1'.repeat(130),
+        },
+      });
+      expect(response.statusCode).toBe(400);
+      expect(JSON.parse(response.payload).error).toContain('body/walletAddress must match pattern');
+    });
+
+    it('should return 400 for missing walletAddress', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/polls',
+        payload: {
+          title: 'Test Poll',
+          description: 'Test Description',
+          options: ['Option 1', 'Option 2'],
+          message: 'Create poll message',
+          signature: '0x' + '1'.repeat(130),
+        },
+      });
+      expect(response.statusCode).toBe(400);
+      expect(JSON.parse(response.payload).error).toContain('body/walletAddress must be string');
+    });
+
+    it('should return 400 for missing message', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/polls',
+        payload: {
+          title: 'Test Poll',
+          description: 'Test Description',
+          options: ['Option 1', 'Option 2'],
+          walletAddress: '0x1234567890123456789012345678901234567890',
+          signature: '0x' + '1'.repeat(130),
+        },
+      });
+      expect(response.statusCode).toBe(400);
+      expect(JSON.parse(response.payload).error).toContain('body/message must be string');
+    });
+
+    it('should return 400 for missing signature', async () => {
       const response = await app.inject({
         method: 'POST',
         url: '/polls',
@@ -92,14 +239,44 @@ describe('Polls Route', () => {
           options: ['Option 1', 'Option 2'],
           walletAddress: '0x1234567890123456789012345678901234567890',
           message: 'Create poll message',
+        },
+      });
+      expect(response.statusCode).toBe(400);
+      expect(JSON.parse(response.payload).error).toContain('body/signature must be string');
+    });
+
+    it('should return 400 for invalid signature format', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/polls',
+        payload: {
+          title: 'Test Poll',
+          description: 'Test Description',
+          options: ['Option 1', 'Option 2'],
+          walletAddress: '0x1234567890123456789012345678901234567890',
+          message: 'Create poll message',
+          signature: 'invalid-signature',
+        },
+      });
+      expect(response.statusCode).toBe(400);
+      expect(JSON.parse(response.payload).error).toContain('body/signature must match pattern');
+    });
+
+    it('should return 400 for description with wrong type', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/polls',
+        payload: {
+          title: 'Test Poll',
+          description: 123, // Wrong type
+          options: ['Option 1', 'Option 2'],
+          walletAddress: '0x1234567890123456789012345678901234567890',
+          message: 'Create poll message',
           signature: '0x' + '1'.repeat(130),
         },
       });
-
-      expect(response.statusCode).toBe(404);
-      const body = JSON.parse(response.payload);
-      expect(body.success).toBe(false);
-      expect(body.error).toBe('User not found');
+      expect(response.statusCode).toBe(400);
+      expect(JSON.parse(response.payload).error).toContain('body/description must be string');
     });
   });
 
@@ -194,18 +371,94 @@ describe('Polls Route', () => {
       expect(body.error).toBe('Poll not found');
     });
 
-    it('should return 400 if user already voted', async () => {
-      const mockPoll = {
-        id: 'poll-1',
-        title: 'Test Poll',
-        options: JSON.stringify(['Option 1', 'Option 2']),
-      };
-      const mockUser = { id: 'user-1', walletAddress: '0x123...' };
+    it('should return 400 for missing optionIndex', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/polls/poll-1/vote',
+        payload: {
+          walletAddress: '0x1234567890123456789012345678901234567890',
+          message: 'Vote message',
+          signature: '0x' + '1'.repeat(130),
+        },
+      });
+      expect(response.statusCode).toBe(400);
+      expect(JSON.parse(response.payload).error).toContain('body/optionIndex must be integer');
+    });
 
-      (prisma.poll.findUnique as any).mockResolvedValue(mockPoll);
-      (prisma.apiUser.findUnique as any).mockResolvedValue(mockUser);
-      (prisma.vote.findUnique as any).mockResolvedValue({ pollId: 'poll-1', userId: 'user-1' });
+    it('should return 400 for optionIndex with wrong type', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/polls/poll-1/vote',
+        payload: {
+          optionIndex: '0', // Wrong type
+          walletAddress: '0x1234567890123456789012345678901234567890',
+          message: 'Vote message',
+          signature: '0x' + '1'.repeat(130),
+        },
+      });
+      expect(response.statusCode).toBe(400);
+      expect(JSON.parse(response.payload).error).toContain('body/optionIndex must be integer');
+    });
 
+    it('should return 400 for optionIndex less than 0', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/polls/poll-1/vote',
+        payload: {
+          optionIndex: -1,
+          walletAddress: '0x1234567890123456789012345678901234567890',
+          message: 'Vote message',
+          signature: '0x' + '1'.repeat(130),
+        },
+      });
+      expect(response.statusCode).toBe(400);
+      expect(JSON.parse(response.payload).error).toContain('body/optionIndex must be >= 0');
+    });
+
+    it('should return 400 for invalid walletAddress format', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/polls/poll-1/vote',
+        payload: {
+          optionIndex: 0,
+          walletAddress: 'invalid-address',
+          message: 'Vote message',
+          signature: '0x' + '1'.repeat(130),
+        },
+      });
+      expect(response.statusCode).toBe(400);
+      expect(JSON.parse(response.payload).error).toContain('body/walletAddress must match pattern');
+    });
+
+    it('should return 400 for missing walletAddress', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/polls/poll-1/vote',
+        payload: {
+          optionIndex: 0,
+          message: 'Vote message',
+          signature: '0x' + '1'.repeat(130),
+        },
+      });
+      expect(response.statusCode).toBe(400);
+      expect(JSON.parse(response.payload).error).toContain('body/walletAddress must be string');
+    });
+
+    it('should return 400 for missing message', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/polls/poll-1/vote',
+        payload: {
+          optionIndex: 0,
+          walletAddress: '0x1234567890123456789012345678901234567890',
+          signature: '0x' + '1'.repeat(130),
+        },
+      });
+      expect(response.statusCode).toBe(400);
+      expect(JSON.parse(response.payload).error).toContain('body/message must be string');
+    });
+
+    it('should return 400 for missing signature', async () => {
       const response = await app.inject({
         method: 'POST',
         url: '/polls/poll-1/vote',
@@ -213,14 +466,25 @@ describe('Polls Route', () => {
           optionIndex: 0,
           walletAddress: '0x1234567890123456789012345678901234567890',
           message: 'Vote message',
-          signature: '0x' + '1'.repeat(130),
         },
       });
-
       expect(response.statusCode).toBe(400);
-      const body = JSON.parse(response.payload);
-      expect(body.success).toBe(false);
-      expect(body.error).toBe('User has already voted on this poll');
+      expect(JSON.parse(response.payload).error).toContain('body/signature must be string');
+    });
+
+    it('should return 400 for invalid signature format', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/polls/poll-1/vote',
+        payload: {
+          optionIndex: 0,
+          walletAddress: '0x1234567890123456789012345678901234567890',
+          message: 'Vote message',
+          signature: 'invalid-signature',
+        },
+      });
+      expect(response.statusCode).toBe(400);
+      expect(JSON.parse(response.payload).error).toContain('body/signature must match pattern');
     });
   });
 

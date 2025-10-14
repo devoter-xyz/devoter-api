@@ -5,8 +5,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "./node_modules/.bin/vitest run",
-    "test:watch": "./node_modules/.bin/vitest",
+    "test": "npx vitest run",
+    "test:watch": "npx vitest",
     "test:coverage": "vitest run --coverage",
     "dev": "tsx watch src/index.ts",
     "build": "tsc",

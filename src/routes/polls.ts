@@ -17,7 +17,7 @@ export default async function pollsRoute(fastify: FastifyInstance) {
     schema: {
       body: Type.Object({
         title: Type.String({ minLength: 1, maxLength: 200 }),
-        description: Type.String({ maxLength: 1000 }),
+        description: Type.Optional(Type.String({ maxLength: 1000 })),
         options: Type.Array(Type.String(), { minItems: 2, maxItems: 10 }),
         walletAddress: Type.RegExp(/^0x[a-fA-F0-9]{40}$/),
         message: Type.String({ minLength: 1, maxLength: 1000 }),
