@@ -44,6 +44,22 @@ describe('API Key Generation', () => {
       const key2 = generateApiKey();
       expect(key1).not.toBe(key2);
     });
+
+    // Should generate deterministic API keys when a seed is provided
+    it('should generate deterministic API keys when a seed is provided', () => {
+      const seed = 'test-seed-123';
+      const key1 = generateApiKey(32, seed);
+      const key2 = generateApiKey(32, seed);
+      expect(key1).toBe(key2); // Expect same key for same seed
+
+      const key3 = generateApiKey(16, seed);
+      const key4 = generateApiKey(16, seed);
+      expect(key3).toBe(key4); // Expect same key for same seed and length
+
+      const differentSeed = 'another-seed';
+      const key5 = generateApiKey(32, differentSeed);
+      expect(key1).not.toBe(key5); // Expect different key for different seed
+    });
   });
 
   // Tests for the generateUniqueApiKey function
