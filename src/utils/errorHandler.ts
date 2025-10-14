@@ -21,9 +21,9 @@ export enum HttpStatusCode {
 }
 
 export interface ErrorResponse {
-  success: boolean;
-  error: string;
-  code?: string;
+  status: number;
+  message: string;
+  code: string;
   details?: Record<string, any>;
 }
 
@@ -113,8 +113,8 @@ export class ApiError extends Error {
 
   toResponse(): ErrorResponse {
     const response: ErrorResponse = {
-      success: false,
-      error: this.message,
+      status: this.statusCode,
+      message: this.message,
       code: this.code,
     };
 
