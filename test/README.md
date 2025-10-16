@@ -21,29 +21,53 @@ test/
 
 ## Running Tests
 
-To run the tests, use the following command:
+To run all tests, use the following command:
 
 ```bash
 npm test
 ```
 
+To run tests in watch mode (re-runs on file changes):
+
+```bash
+npm run test:watch
+```
+
+To run tests and generate a coverage report:
+
+```bash
+npm run test:coverage
+```
+
+To run a specific test file, you can pass the file path to `vitest`:
+
+```bash
+npx vitest run test/utils/validation.test.ts
+```
+
+## Troubleshooting
+
+*   **Tests not running:** Ensure all dependencies are installed by running `npm install`.
+*   **Coverage not generating:** Make sure `vitest` is correctly configured in `vitest.config.mts` and all dependencies are installed.
+*   **"Cannot find module" errors:** Check your `tsconfig.json` and ensure paths are correctly configured.
+
 ## Test Coverage
 
 We aim for comprehensive test coverage of the codebase, focusing on:
 
-1. Core utility functions
-2. Authentication middleware
-3. API endpoint logic
-4. Edge cases and error handling
+1.  Core utility functions
+2.  Authentication middleware
+3.  API endpoint logic
+4.  Edge cases and error handling
 
 ## Current Progress
 
-- ✅ Basic signature verification
-  - Valid signatures from known wallet addresses
-  - Invalid signatures (wrong message, wrong address)
+-   ✅ Basic signature verification
+    -   Valid signatures from known wallet addresses
+    -   Invalid signatures (wrong message, wrong address)
 
 ## Next Steps
 
-- Complete remaining signature verification tests
-- Add tests for API key generation utilities
-- Add integration tests for API endpoints
+-   Complete remaining signature verification tests
+-   Add tests for API key generation utilities
+-   Add integration tests for API endpoints
