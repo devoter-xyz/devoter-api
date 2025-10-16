@@ -1,5 +1,5 @@
 
-import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import type { FastifyInstance, FastifyRequest } from 'fastify';
 
 /**
 /**
@@ -51,15 +51,15 @@ export const rateLimitConfigs = {
 /**
  * Custom error response for rate limit exceeded
  */
-export const rateLimitErrorHandler = (request: FastifyRequest, reply: FastifyReply, context: any) => {
+export const rateLimitErrorHandler = (request: FastifyRequest, context: any) => {
   const retryAfter = Math.ceil(context.ttl / 1000);
-  reply.header('Retry-After', retryAfter);
-  reply.status(429);
   return {
     statusCode: 429,
     error: 'Rate limit exceeded',
     message: `Too many requests for ${request.url}. Try again in ${retryAfter} seconds.`,
-    retryAfter: retryAfter,
+    headers: {
+      'Retry-After': retryAfter,
+    },
   };
 };
 
