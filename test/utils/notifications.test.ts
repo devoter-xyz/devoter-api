@@ -1,12 +1,27 @@
 import { test, expect, beforeEach } from 'vitest';
-import Fastify, { FastifyInstance, FastifyPluginOptions } from 'fastify';
+import Fastify, { FastifyInstance } from 'fastify';
 import notificationsRoutes from '../../src/routes/notifications';
 
 let fastify: FastifyInstance;
 
+interface Notification {
+  id: string;
+  user: string;
+  message: string;
+  createdAt: Date;
+}
+
+const mockNotifications: Notification[] = [];
+const mockNotificationStore = {
+  push: (notification: Notification) => mockNotifications.push(notification),
+  getAll: () => mockNotifications.map(n => ({ ...n, createdAt: n.createdAt.toISOString() })),
+  clear: () => { mockNotifications.length = 0; },
+};
+
 beforeEach(async () => {
+  mockNotificationStore.clear(); // Clear the mock store before each test
   fastify = Fastify();
-  await fastify.register(notificationsRoutes);
+  await fastify.register(notificationsRoutes, { notificationStore: mockNotificationStore });
 });
 
 test('GET /notifications returns an empty array initially', async () => {
@@ -17,6 +32,7 @@ test('GET /notifications returns an empty array initially', async () => {
 
   expect(response.statusCode).toBe(200);
   expect(response.json()).toEqual([]);
+  expect(mockNotificationStore.getAll()).toEqual([]);
 });
 
 test('POST /notifications creates a new notification', async () => {
@@ -37,6 +53,9 @@ test('POST /notifications creates a new notification', async () => {
   expect(responseBody.user).toBe(newNotification.user);
   expect(responseBody.message).toBe(newNotification.message);
   expect(responseBody).toHaveProperty('createdAt');
+
+  // Assert against the mock store directly
+  expect(mockNotificationStore.getAll()).toEqual([responseBody]);
 
   const getResponse = await fastify.inject({
     method: 'GET',
@@ -59,6 +78,7 @@ test('POST /notifications returns 400 if user is missing', async () => {
 
   expect(response.statusCode).toBe(400);
   expect(response.json()).toEqual({ error: 'User and message are required.' });
+  expect(mockNotificationStore.getAll()).toEqual([]);
 });
 
 test('POST /notifications returns 400 if message is missing', async () => {
@@ -74,4 +94,5 @@ test('POST /notifications returns 400 if message is missing', async () => {
 
   expect(response.statusCode).toBe(400);
   expect(response.json()).toEqual({ error: 'User and message are required.' });
+  expect(mockNotificationStore.getAll()).toEqual([]);
 });
