@@ -3,12 +3,19 @@ import type { FastifyRequest, FastifyReply } from 'fastify';
 import { verifyWalletSignature } from '../../src/middleware/auth.js';
 import { ApiError, HttpStatusCode } from '../../src/utils/errorHandler.js';
 
+let capturedError: ApiError | undefined;
+let capturedRequest: FastifyRequest | undefined;
+let capturedReply: FastifyReply | undefined;
+
 // Mock the handleError function to capture the arguments it's called with
 vi.mock('../../src/utils/errorHandler.js', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../src/utils/errorHandler.js')>();
   return {
     ...actual,
     handleError: vi.fn((error, request, reply) => {
+      capturedError = error as ApiError;
+      capturedRequest = request;
+      capturedReply = reply;
       // Simulate the behavior of handleError by sending the error response
       const apiError = error instanceof actual.ApiError ? error : actual.ApiError.internal();
       reply.status(apiError.statusCode).send(apiError.toResponse());
@@ -53,12 +60,10 @@ test('should return unauthorized JSON response for invalid wallet signature', as
     send: vi.fn(),
   } as unknown as FastifyReply;
 
-  try {
-    await verifyWalletSignature(request, reply);
-  } catch (error) {
-    // Manually call the mocked handleError as Fastify would
-    handleError(error as ApiError, request, reply);
-  }
+  await expect(verifyWalletSignature(request, reply)).rejects.toBeInstanceOf(ApiError);
+  expect(capturedError).toBeInstanceOf(ApiError);
+  expect(capturedRequest).toBe(request);
+  expect(capturedReply).toBe(reply);
 
   // Assert that handleError was called
   expect(handleError).toHaveBeenCalledOnce();
@@ -140,4 +145,3 @@ test('should return bad request JSON response for invalid input structure', asyn
     })
   );
 });
-
