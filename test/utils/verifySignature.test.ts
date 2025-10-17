@@ -38,7 +38,8 @@ describe("Basic Signature Verification", () => {
     const result = verifySignature(message, signature, wallet.address);
 
     // The verification should succeed
-    expect(result).toBe(true);
+    expect(result.isValid).toBe(true);
+    expect(result.error).toBeUndefined();
   });
 
   /**
@@ -66,7 +67,8 @@ describe("Basic Signature Verification", () => {
       signature,
       wallet.address
     );
-    expect(wrongMessageResult).toBe(false);
+    expect(wrongMessageResult.isValid).toBe(false);
+    expect(wrongMessageResult.error).toBeDefined();
 
     // Test with wrong wallet address
     const wrongAddressResult = verifySignature(
@@ -74,7 +76,8 @@ describe("Basic Signature Verification", () => {
       signature,
       differentWallet.address
     );
-    expect(wrongAddressResult).toBe(false);
+    expect(wrongAddressResult.isValid).toBe(false);
+    expect(wrongAddressResult.error).toBeDefined();
   });
 
   /**
@@ -97,7 +100,8 @@ describe("Basic Signature Verification", () => {
       signature,
       wallet.address
     );
-    expect(originalAddressResult).toBe(true);
+    expect(originalAddressResult.isValid).toBe(true);
+    expect(originalAddressResult.error).toBeUndefined();
 
     // Test with lowercase address
     const lowercaseAddressResult = verifySignature(
@@ -105,7 +109,8 @@ describe("Basic Signature Verification", () => {
       signature,
       wallet.address.toLowerCase()
     );
-    expect(lowercaseAddressResult).toBe(true);
+    expect(lowercaseAddressResult.isValid).toBe(true);
+    expect(lowercaseAddressResult.error).toBeUndefined();
 
     // Test with uppercase address
     const uppercaseAddressResult = verifySignature(
@@ -113,7 +118,8 @@ describe("Basic Signature Verification", () => {
       signature,
       wallet.address.toUpperCase()
     );
-    expect(uppercaseAddressResult).toBe(true);
+    expect(uppercaseAddressResult.isValid).toBe(true);
+    expect(uppercaseAddressResult.error).toBeUndefined();
 
     // Test with mixed case variations
     const mixedCaseAddress1 = wallet.address.toLowerCase().replace(/^0x/, "0X");
@@ -122,12 +128,14 @@ describe("Basic Signature Verification", () => {
       signature,
       mixedCaseAddress1
     );
-    expect(mixedCaseResult1).toBe(true);
+    expect(mixedCaseResult1.isValid).toBe(true);
+    expect(mixedCaseResult1.error).toBeUndefined();
 
     // Test with checksum address (EIP-55)
     const checksumAddress = ethers.getAddress(wallet.address);
     const checksumResult = verifySignature(message, signature, checksumAddress);
-    expect(checksumResult).toBe(true);
+    expect(checksumResult.isValid).toBe(true);
+    expect(checksumResult.error).toBeUndefined();
   });
 
   /**
@@ -152,7 +160,8 @@ describe("Basic Signature Verification", () => {
 
     for (const addressFormat of addressFormats) {
       const result = verifySignature(message, signature, addressFormat);
-      expect(result).toBe(true);
+      expect(result.isValid).toBe(true);
+      expect(result.error).toBeUndefined();
     }
   });
 
@@ -174,11 +183,14 @@ describe("Basic Signature Verification", () => {
       invalidSignature,
       wallet.address
     );
-    expect(invalidResult).toBe(false);
+    expect(invalidResult.isValid).toBe(false);
+    expect(invalidResult.error).toBeDefined();
+    expect(invalidResult.error).toContain("Signature verification failed");
 
     // Test with empty signature
     const emptyResult = verifySignature(message, "", wallet.address);
-    expect(emptyResult).toBe(false);
+    expect(emptyResult.isValid).toBe(false);
+    expect(emptyResult.error).toBe("Signature cannot be empty");
 
     // Test with signature that's too short
     const shortSignature = "0x1234";
@@ -187,7 +199,32 @@ describe("Basic Signature Verification", () => {
       shortSignature,
       wallet.address
     );
-    expect(shortResult).toBe(false);
+    expect(shortResult.isValid).toBe(false);
+    expect(shortResult.error).toBeDefined();
+    expect(shortResult.error).toContain("Signature verification failed");
+  });
+
+  /**
+   * Test edge cases for verifySignature with empty or malformed inputs.
+   * Ensures the function handles these gracefully and returns appropriate errors.
+   */
+  it("should return false and an error for empty message", () => {
+    const walletAddress = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266";
+    const signature = "0x...some-valid-signature..."; // Placeholder, actual value doesn't matter for this test
+    const result = verifySignature("", signature, walletAddress);
+    expect(result.isValid).toBe(false);
+    expect(result.error).toBe("Message cannot be empty");
+  });
+
+  it("should return false and an error for empty wallet address", async () => {
+    const wallet = new ethers.Wallet(
+      "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
+    );
+    const message = "Test message";
+    const signature = await wallet.signMessage(message);
+    const result = verifySignature(message, signature, "");
+    expect(result.isValid).toBe(false);
+    expect(result.error).toBe("Wallet address cannot be empty");
   });
 });
 
