@@ -10,6 +10,8 @@ export const comments: Array<{
   createdAt: Date;
 }> = [];
 
+import { validateCommentInput } from '../utils/validation';
+
 const commentsRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) => {
   // Get comments for a poll
 
@@ -24,9 +26,11 @@ const commentsRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) => {
   fastify.post('/poll/:pollId', async (request: FastifyRequest<{ Params: { pollId: string }; Body: { user?: string; comment?: string } }>, reply: FastifyReply) => {
     const { pollId } = request.params;
     const { user, comment } = request.body || {};
-    if (!user || !comment) {
+
+    const validation = validateCommentInput({ user, comment });
+    if (!validation.isValid) {
       reply.status(400);
-      return { error: 'User and comment are required.' };
+      return { error: validation.error };
     }
     const newComment = {
       id: Math.random().toString(36).substr(2, 9),

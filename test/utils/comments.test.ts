@@ -99,7 +99,7 @@ describe('Comments Routes', () => {
       });
 
       expect(response.statusCode).toBe(400);
-      expect(JSON.parse(response.payload)).toEqual({ error: 'User and comment are required.' });
+      expect(JSON.parse(response.payload)).toEqual({ error: 'User is required and must be a non-empty string' });
       expect(comments.length).toBe(0);
     });
 
@@ -113,7 +113,7 @@ describe('Comments Routes', () => {
       });
 
       expect(response.statusCode).toBe(400);
-      expect(JSON.parse(response.payload)).toEqual({ error: 'User and comment are required.' });
+      expect(JSON.parse(response.payload)).toEqual({ error: 'Comment is required and must be a non-empty string' });
       expect(comments.length).toBe(0);
     });
   });
