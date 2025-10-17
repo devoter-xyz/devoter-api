@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { validateWalletAuthInput, validateSignatureFormat, validateAddressFormat } from '../../src/utils/validation';
+import { validateWalletAuthInput, validateSignatureFormat, validateAddressFormat, validateCommentInput } from '../../src/utils/validation';
 
 describe('Input Validation', () => {
   describe('validateWalletAuthInput', () => {
@@ -184,6 +184,105 @@ describe('Input Validation', () => {
       const result = validateWalletAuthInput(input);
       expect(result.isValid).toBe(true);
       expect(result.error).toBeUndefined();
+    });
+  });
+
+  describe('validateCommentInput', () => {
+    it('should return valid for correct comment input', () => {
+      const validInput = {
+        user: 'testUser',
+        comment: 'This is a test comment.',
+      };
+      const result = validateCommentInput(validInput);
+      expect(result.isValid).toBe(true);
+      expect(result.error).toBeUndefined();
+    });
+
+    it('should reject input missing user', () => {
+      const invalidInput = {
+        comment: 'This is a test comment.',
+      };
+      const result = validateCommentInput(invalidInput);
+      expect(result.isValid).toBe(false);
+      expect(result.error).toBe('User is required and must be a non-empty string');
+    });
+
+    it('should reject input missing comment', () => {
+      const invalidInput = {
+        user: 'testUser',
+      };
+      const result = validateCommentInput(invalidInput);
+      expect(result.isValid).toBe(false);
+      expect(result.error).toBe('Comment is required and must be a non-empty string');
+    });
+
+    it('should reject input with empty user string', () => {
+      const invalidInput = {
+        user: '',
+        comment: 'This is a test comment.',
+      };
+      const result = validateCommentInput(invalidInput);
+      expect(result.isValid).toBe(false);
+      expect(result.error).toBe('User is required and must be a non-empty string');
+    });
+
+    it('should reject input with whitespace-only user string', () => {
+      const invalidInput = {
+        user: '   ',
+        comment: 'This is a test comment.',
+      };
+      const result = validateCommentInput(invalidInput);
+      expect(result.isValid).toBe(false);
+      expect(result.error).toBe('User is required and must be a non-empty string');
+    });
+
+    it('should reject input with empty comment string', () => {
+      const invalidInput = {
+        user: 'testUser',
+        comment: '',
+      };
+      const result = validateCommentInput(invalidInput);
+      expect(result.isValid).toBe(false);
+      expect(result.error).toBe('Comment is required and must be a non-empty string');
+    });
+
+    it('should reject input with whitespace-only comment string', () => {
+      const invalidInput = {
+        user: 'testUser',
+        comment: '   ',
+      };
+      const result = validateCommentInput(invalidInput);
+      expect(result.isValid).toBe(false);
+      expect(result.error).toBe('Comment is required and must be a non-empty string');
+    });
+
+    it('should reject non-object or primitive input (null, undefined, number, string, array, boolean)', () => {
+      const inputs = [null, undefined, 42, 'string', [], true];
+      inputs.forEach(input => {
+        const result = validateCommentInput(input);
+        expect(result.isValid).toBe(false);
+        expect(result.error).toBe('Request body must be a valid JSON object');
+      });
+    });
+
+    it('should reject input where user is not a string', () => {
+      const invalidInput = {
+        user: 123,
+        comment: 'This is a test comment.',
+      };
+      const result = validateCommentInput(invalidInput);
+      expect(result.isValid).toBe(false);
+      expect(result.error).toBe('User is required and must be a non-empty string');
+    });
+
+    it('should reject input where comment is not a string', () => {
+      const invalidInput = {
+        user: 'testUser',
+        comment: 123,
+      };
+      const result = validateCommentInput(invalidInput);
+      expect(result.isValid).toBe(false);
+      expect(result.error).toBe('Comment is required and must be a non-empty string');
     });
   });
 

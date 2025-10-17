@@ -13,6 +13,32 @@ export interface ValidationResult {
   error?: string;
 }
 
+export interface CommentInput {
+  user?: string;
+  comment?: string;
+}
+
+/**
+ * Validates the structure and format of comment input
+ */
+export function validateCommentInput(input: CommentInput): ValidationResult {
+  if (!input || typeof input !== "object" || Array.isArray(input)) {
+    return { isValid: false, error: "Request body must be a valid JSON object" };
+  }
+
+  const { user, comment } = input;
+
+  if (!Object.prototype.hasOwnProperty.call(input, "user") || !user || typeof user !== "string" || user.trim().length === 0) {
+    return { isValid: false, error: "User is required and must be a non-empty string" };
+  }
+
+  if (!Object.prototype.hasOwnProperty.call(input, "comment") || !comment || typeof comment !== "string" || comment.trim().length === 0) {
+    return { isValid: false, error: "Comment is required and must be a non-empty string" };
+  }
+
+  return { isValid: true };
+}
+
 /**
  * Validates the structure and format of wallet authentication input
  */
