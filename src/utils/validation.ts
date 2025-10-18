@@ -19,7 +19,10 @@ export interface CommentInput {
 }
 
 /**
- * Validates the structure and format of comment input
+ * Validates the structure and format of comment input.
+ * @param input - The comment input object containing 'user' and 'comment' fields.
+ * @returns A ValidationResult object indicating if the input is valid and an error message if not.
+ * @throws This function does not explicitly throw errors, but returns them in the ValidationResult.
  */
 export function validateCommentInput(input: CommentInput): ValidationResult {
   if (!input || typeof input !== "object" || Array.isArray(input)) {
@@ -40,7 +43,10 @@ export function validateCommentInput(input: CommentInput): ValidationResult {
 }
 
 /**
- * Validates the structure and format of wallet authentication input
+ * Validates the structure and format of wallet authentication input.
+ * @param input - The wallet authentication input object containing 'walletAddress', 'message', and 'signature' fields.
+ * @returns A ValidationResult object indicating if the input is valid and an error message if not.
+ * @throws This function does not explicitly throw errors, but returns them in the ValidationResult.
  */
 export function validateWalletAuthInput(input: any): ValidationResult {
   // Check if input exists and is an object
@@ -123,7 +129,10 @@ export function validateWalletAuthInput(input: any): ValidationResult {
 }
 
 /**
- * Validates Ethereum signature format
+ * Validates Ethereum signature format.
+ * @param signature - The Ethereum signature string to validate.
+ * @returns True if the signature format is valid, false otherwise.
+ * @throws This function does not throw errors.
  */
 export function validateSignatureFormat(signature: string): boolean {
   const signatureRegex = /^0x[a-fA-F0-9]{130}$/;
@@ -131,7 +140,10 @@ export function validateSignatureFormat(signature: string): boolean {
 }
 
 /**
- * Validates Ethereum address format
+ * Validates Ethereum address format.
+ * @param address - The Ethereum address string to validate.
+ * @returns True if the address format is valid, false otherwise.
+ * @throws This function does not throw errors.
  */
 export function validateAddressFormat(address: string): boolean {
   const addressRegex = /^0x[a-fA-F0-9]{40}$/;
