@@ -11,16 +11,30 @@ export function verifySignature(
   message: string,
   signature: string,
   walletAddress: string
-): boolean {
+): { isValid: boolean; error?: string } {
+  if (!message) {
+    return { isValid: false, error: "Message cannot be empty" };
+  }
+  if (!signature) {
+    return { isValid: false, error: "Signature cannot be empty" };
+  }
+  if (!walletAddress) {
+    return { isValid: false, error: "Wallet address cannot be empty" };
+  }
+
   try {
     // Recover the address from the signature
     const recoveredAddress = ethers.verifyMessage(message, signature);
 
     // Compare addresses (case-insensitive)
-    return recoveredAddress.toLowerCase() === walletAddress.toLowerCase();
-  } catch (error) {
-    console.error("Error verifying signature:", error);
-    return false;
+    if (recoveredAddress.toLowerCase() === walletAddress.toLowerCase()) {
+      return { isValid: true };
+    } else {
+      return { isValid: false, error: "Signature does not match wallet address" };
+    }
+  } catch (error: any) {
+    // ethers.verifyMessage can throw if signature is malformed
+    return { isValid: false, error: `Signature verification failed: ${error.message || error}` };
   }
 }
 
@@ -40,10 +54,10 @@ export function verifySignatureWithTimestamp(
 ): { isValid: boolean; error?: string } {
   try {
     // First verify the signature
-    const isSignatureValid = verifySignature(message, signature, walletAddress);
+    const { isValid: isSignatureValid, error: signatureError } = verifySignature(message, signature, walletAddress);
 
     if (!isSignatureValid) {
-      return { isValid: false, error: "Invalid signature" };
+      return { isValid: false, error: signatureError || "Invalid signature" };
     }
 
     // Extract timestamp from message (anchored to expected format)
