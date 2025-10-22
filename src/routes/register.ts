@@ -1,16 +1,13 @@
 import type { FastifyInstance } from "fastify";
-import { PrismaClient } from "@prisma/client";
 import { verifyWalletSignature } from "../middleware/auth.js";
 import { rateLimitConfigs } from "../middleware/rateLimit.js";
-import { Type } from "@sinclair/typebox";
+import * as Type from "@sinclair/typebox";
 import {
   ApiError,
   asyncHandler,
   HttpStatusCode,
 } from "../utils/errorHandler.js";
-
-
-const prisma = new PrismaClient();
+import { prisma } from "../lib/prisma.js";
 
 // Define the expected request body type for clarity and reusability
 type RegisterRequestBody = {

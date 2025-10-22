@@ -1,20 +1,18 @@
 import type { FastifyInstance } from "fastify";
-import { PrismaClient } from "@prisma/client";
 import { verifyWalletSignature } from "../middleware/auth.js";
+import { rateLimitConfigs } from "../middleware/rateLimit.js";
+import * as Type from "@sinclair/typebox";
 import {
   generateUniqueApiKey,
   hashApiKey,
   maskApiKey,
 } from "../utils/generateApiKey.js";
-import { rateLimitConfigs } from "../middleware/rateLimit.js";
-import { Type } from "@sinclair/typebox";
 import {
   ApiError,
   asyncHandler,
   HttpStatusCode,
 } from "../utils/errorHandler.js";
-
-const prisma = new PrismaClient();
+import { prisma } from "../lib/prisma.js";
 
 export default async function apiKeysRoute(fastify: FastifyInstance) {
   // POST /api-keys - Create a new API key
