@@ -1,6 +1,6 @@
-import { test, expect, vi, beforeEach } from 'vitest';
+import { test, expect, vi, beforeEach, describe } from 'vitest';
 import type { FastifyRequest, FastifyReply } from 'fastify';
-import { verifyWalletSignature } from '../../src/middleware/auth.js';
+import { verifyWalletSignature, extractBearerToken, isValidApiKeyFormat } from '../../src/middleware/auth.js';
 import { ApiError, HttpStatusCode } from '../../src/utils/errorHandler.js';
 
 let capturedError: ApiError | undefined;
@@ -144,4 +144,61 @@ test('should return bad request JSON response for invalid input structure', asyn
       code: 'INVALID_AUTH_INPUT',
     })
   );
+});
+
+  describe('API Key Helper Functions', () => {
+  describe('extractBearerToken', () => {
+    test('should extract token from a valid Bearer header', () => {
+      const header = 'Bearer some_valid_token_string';
+      expect(extractBearerToken(header)).toBe('some_valid_token_string');
+    });
+
+    test('should return null for a malformed header (missing Bearer)', () => {
+      const header = 'Token some_token';
+      expect(extractBearerToken(header)).toBeNull();
+    });
+
+    test('should return null for a malformed header (incorrect spacing)', () => {
+      const header = 'Bearer  some_token';
+      expect(extractBearerToken(header)).toBeNull();
+    });
+
+    test('should return null for an empty header', () => {
+      const header = '';
+      expect(extractBearerToken(header)).toBeNull();
+    });
+
+    test('should return null if header is just Bearer', () => {
+      const header = 'Bearer';
+      expect(extractBearerToken(header)).toBeNull();
+    });
+  });
+
+  describe('isValidApiKeyFormat', () => {
+    test('should return true for a valid API key format', () => {
+      // This format should match the regex /^[a-zA-Z0-9\-_.]+$/ and length > 30
+      const validKey = 'valid-api-key-with-some-more-characters-12345';
+      expect(isValidApiKeyFormat(validKey)).toBe(true);
+    });
+
+    test('should return false for an API key that is too short', () => {
+      const shortKey = 'short-key';
+      expect(isValidApiKeyFormat(shortKey)).toBe(false);
+    });
+
+    test('should return false for an API key with invalid characters', () => {
+      const invalidCharKey = 'validkey!@#';
+      expect(isValidApiKeyFormat(invalidCharKey)).toBe(false);
+    });
+
+    test('should return false for an empty string', () => {
+      const emptyKey = '';
+      expect(isValidApiKeyFormat(emptyKey)).toBe(false);
+    });
+
+    test('should return false for a key with spaces', () => {
+      const keyWithSpaces = 'key with spaces';
+      expect(isValidApiKeyFormat(keyWithSpaces)).toBe(false);
+    });
+  });
 });
