@@ -9,6 +9,7 @@ import { config } from "dotenv";
 import {
   registerRateLimiting,
   rateLimitConfigs,
+  createRateLimitHandler,
 } from "./middleware/rateLimit.js";
 
 // Import custom error handling plugin
@@ -54,11 +55,11 @@ const start = async () => {
     server.get(
       "/health",
       {
-        config: {
-          rateLimit: rateLimitConfigs.health,
-        },
-      },
-      async () => {
+        ...createRateLimitHandler({
+          max: 2, // Allow only 2 requests for health check
+          timeWindow: 10000, // per 10 seconds
+        }),
+        handler: async () => {
         return {
           status: "healthy",
           timestamp: new Date().toISOString(),
