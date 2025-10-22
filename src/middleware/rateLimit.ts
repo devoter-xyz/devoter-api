@@ -122,9 +122,8 @@ export function createRateLimitHandler(options?: RateLimitOptions) {
   };
 
   return {
-    config,
+    rateLimit: config,
     preHandler: async (request: FastifyRequest, reply: FastifyReply) => {
-      // Custom logic can be added here if needed
       return;
     },
   };
