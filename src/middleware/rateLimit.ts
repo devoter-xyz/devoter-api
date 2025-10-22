@@ -108,11 +108,22 @@ export async function registerRateLimiting(fastify: FastifyInstance) {
 /**
  * Create rate limit preHandler for specific configurations
  */
-export function createRateLimitHandler(config: typeof rateLimitConfigs.general) {
+export interface RateLimitOptions {
+  max?: number;
+  timeWindow?: number;
+  skipSuccessfulRequests?: boolean;
+  skipOnError?: boolean;
+}
+
+export function createRateLimitHandler(options?: RateLimitOptions) {
+  const config = {
+    ...rateLimitConfigs.general, // Use general config as base
+    ...options, // Override with provided options
+  };
+
   return {
-    config,
+    rateLimit: config,
     preHandler: async (request: FastifyRequest, reply: FastifyReply) => {
-      // Custom logic can be added here if needed
       return;
     },
   };
