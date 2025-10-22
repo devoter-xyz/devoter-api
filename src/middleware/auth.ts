@@ -2,34 +2,15 @@ import type { FastifyRequest, FastifyReply } from "fastify";
 import { verifySignatureWithTimestamp } from "../utils/verifySignature.js";
 import { validateWalletAuthInput } from "../utils/validation.js";
 import { ApiError } from "../utils/errorHandler.js";
-import { PrismaClient } from "@prisma/client";
-import { hashApiKey } from "../utils/generateApiKey.js";
-
-const prisma = new PrismaClient();
+import { extractBearerToken } from "../utils/auth.js";
+import { hashApiKey, isValidApiKeyFormat } from "../utils/generateApiKey.js";
+import { prisma } from "../lib/prisma.js";
 
 /**
  * Extracts a Bearer token from the Authorization header.
  * @param header The Authorization header string.
  * @returns The extracted token string, or null if not found or malformed.
  */
-export function extractBearerToken(header: string): string | null {
-  const parts = header.split(' ');
-  if (parts.length === 2 && parts[0] === 'Bearer') {
-    return parts[1] as string;
-  }
-  return null;
-}
-
-/**
- * Validates the basic format of an API key.
- * @param token The API key string.
- * @returns True if the format is valid, false otherwise.
- */
-export function isValidApiKeyFormat(token: string): boolean {
-  // Example: Basic check for length and character set. Adjust as per actual API key format.
-  return typeof token === 'string' && token.length > 30 && /^[a-zA-Z0-9\-_.]+$/.test(token);
-}
-
 // Enhanced middleware with comprehensive input validation
 export async function verifyWalletSignature(
   request: FastifyRequest,
