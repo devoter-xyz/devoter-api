@@ -10,7 +10,7 @@ const requestTimingPlugin: FastifyPluginAsync = async (fastify) => {
     request.hrtime = process.hrtime.bigint();
   });
 
-  fastify.addHook('onResponse', async (request, reply) => {
+  fastify.addHook('onSend', async (request, reply, payload) => {
     const start = request.hrtime as bigint;
     const end = process.hrtime.bigint();
     const duration = Number(end - start) / 1_000_000; // Convert nanoseconds to milliseconds
@@ -20,6 +20,8 @@ const requestTimingPlugin: FastifyPluginAsync = async (fastify) => {
     if (duration > SLOW_REQUEST_THRESHOLD_MS) {
       fastify.log.warn(`Slow request: ${request.method} ${request.url} - ${duration.toFixed(2)}ms`);
     }
+
+    return payload;
   });
 };
 
