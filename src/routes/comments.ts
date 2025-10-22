@@ -10,7 +10,7 @@ export const comments: Array<{
   createdAt: Date;
 }> = [];
 
-import { validateCommentInput } from '../utils/validation';
+import { validateCommentInput } from '../utils/validation.js';
 
 const commentsRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) => {
   // Get comments for a poll
@@ -27,7 +27,7 @@ const commentsRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) => {
     const { pollId } = request.params;
     const { user, comment } = request.body || {};
 
-    const validation = validateCommentInput({ user, comment });
+    const validation = validateCommentInput({ user: user || '', comment: comment || '' });
     if (!validation.isValid) {
       reply.status(400);
       return { error: validation.error };
@@ -35,8 +35,8 @@ const commentsRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) => {
     const newComment = {
       id: Math.random().toString(36).substr(2, 9),
       pollId,
-      user,
-      comment,
+      user: user as string,
+      comment: comment as string,
       createdAt: new Date(),
     };
     comments.push(newComment);

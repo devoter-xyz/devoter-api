@@ -13,6 +13,7 @@ import {
 
 // Import custom error handling plugin
 import errorPlugin from "./plugins/errorPlugin.js";
+import requestTimingPlugin from "./plugins/requestTiming.js";
 
 
 // Load environment variables from .env file into process.env
@@ -36,6 +37,8 @@ const start = async () => {
   try {
     // Register error handling plugin first to catch errors from subsequent plugins/routes
     await server.register(errorPlugin);
+    // Register request timing plugin to measure and log request durations
+    await server.register(requestTimingPlugin);
 
     // Register CORS (Cross-Origin Resource Sharing) to allow requests from specified origins
     await server.register((await import("@fastify/cors")).default, {
