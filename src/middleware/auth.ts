@@ -1,5 +1,4 @@
 import type { FastifyRequest, FastifyReply } from "fastify";
-import type { FastifyRequest, FastifyReply } from "fastify";
 import { verifySignatureWithTimestamp } from "../utils/verifySignature.js";
 import { validateWalletAuthInput } from "../utils/validation.js";
 import { ApiError } from "../utils/errorHandler.js";
@@ -16,7 +15,7 @@ const prisma = new PrismaClient();
 export function extractBearerToken(header: string): string | null {
   const parts = header.split(' ');
   if (parts.length === 2 && parts[0] === 'Bearer') {
-    return parts[1];
+    return parts[1] as string;
   }
   return null;
 }
@@ -135,7 +134,7 @@ export async function verifyApiKey(
   const hashedToken = hashApiKey(token);
 
   // 5. Look up the API key in the database
-  const apiKeyRecord = await prisma.apiKey.findUnique({
+  const apiKeyRecord = await prisma.apiKey.findFirst({
     where: {
       key: hashedToken,
       status: "ACTIVE", // Ensure the API key is active
