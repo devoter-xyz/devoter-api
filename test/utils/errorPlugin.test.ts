@@ -21,7 +21,7 @@ describe('Error Handling', () => {
 
       expect(mockReply.status).toHaveBeenCalledWith(HttpStatusCode.BAD_REQUEST);
       expect(mockReply.send).toHaveBeenCalledWith({
-        status: HttpStatusCode.BAD_REQUEST,
+        statusCode: HttpStatusCode.BAD_REQUEST,
         message: 'Invalid input',
         code: 'VALIDATION_FAILED',
       });
@@ -42,7 +42,7 @@ describe('Error Handling', () => {
 
       expect(mockReply.status).toHaveBeenCalledWith(HttpStatusCode.INTERNAL_SERVER_ERROR);
       expect(mockReply.send).toHaveBeenCalledWith({
-        status: HttpStatusCode.INTERNAL_SERVER_ERROR,
+        statusCode: HttpStatusCode.INTERNAL_SERVER_ERROR,
         message: 'An unexpected error occurred',
         code: 'INTERNAL_ERROR',
       });
@@ -69,7 +69,7 @@ describe('Error Handling', () => {
 
       expect(mockReply.status).toHaveBeenCalledWith(HttpStatusCode.BAD_REQUEST);
       expect(mockReply.send).toHaveBeenCalledWith({
-        status: HttpStatusCode.BAD_REQUEST,
+        statusCode: HttpStatusCode.BAD_REQUEST,
         message: 'Request validation failed',
         code: 'VALIDATION_ERROR',
         details: { errors: fastifyValidationError.validation },
@@ -97,7 +97,7 @@ describe('Error Handling', () => {
 
       expect(mockReply.status).toHaveBeenCalledWith(HttpStatusCode.CONFLICT);
       expect(mockReply.send).toHaveBeenCalledWith({
-        status: HttpStatusCode.CONFLICT,
+        statusCode: HttpStatusCode.CONFLICT,
         message: 'A resource with this identifier already exists',
         code: 'UNIQUE_CONSTRAINT_VIOLATION',
         details: { fields: ['email'] },
