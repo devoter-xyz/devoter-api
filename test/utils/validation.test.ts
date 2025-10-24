@@ -204,7 +204,7 @@ describe('Input Validation', () => {
       };
       const result = validateCommentInput(invalidInput);
       expect(result.isValid).toBe(false);
-      expect(result.error).toBe('User is required and must be a non-empty string');
+      expect(result.error).toBe('User is required and must be a string between 3 and 50 characters');
     });
 
     it('should reject input missing comment', () => {
@@ -213,7 +213,7 @@ describe('Input Validation', () => {
       };
       const result = validateCommentInput(invalidInput);
       expect(result.isValid).toBe(false);
-      expect(result.error).toBe('Comment is required and must be a non-empty string');
+      expect(result.error).toBe('Comment is required and must be a string between 1 and 500 characters');
     });
 
     it('should reject input with empty user string', () => {
@@ -223,7 +223,7 @@ describe('Input Validation', () => {
       };
       const result = validateCommentInput(invalidInput);
       expect(result.isValid).toBe(false);
-      expect(result.error).toBe('User is required and must be a non-empty string');
+      expect(result.error).toBe('User is required and must be a string between 3 and 50 characters');
     });
 
     it('should reject input with whitespace-only user string', () => {
@@ -233,7 +233,7 @@ describe('Input Validation', () => {
       };
       const result = validateCommentInput(invalidInput);
       expect(result.isValid).toBe(false);
-      expect(result.error).toBe('User is required and must be a non-empty string');
+      expect(result.error).toBe('User is required and must be a string between 3 and 50 characters');
     });
 
     it('should reject input with empty comment string', () => {
@@ -243,7 +243,7 @@ describe('Input Validation', () => {
       };
       const result = validateCommentInput(invalidInput);
       expect(result.isValid).toBe(false);
-      expect(result.error).toBe('Comment is required and must be a non-empty string');
+      expect(result.error).toBe('Comment is required and must be a string between 1 and 500 characters');
     });
 
     it('should reject input with whitespace-only comment string', () => {
@@ -253,7 +253,7 @@ describe('Input Validation', () => {
       };
       const result = validateCommentInput(invalidInput);
       expect(result.isValid).toBe(false);
-      expect(result.error).toBe('Comment is required and must be a non-empty string');
+      expect(result.error).toBe('Comment is required and must be a string between 1 and 500 characters');
     });
 
     it('should reject non-object or primitive input (null, undefined, number, string, array, boolean)', () => {
@@ -272,7 +272,7 @@ describe('Input Validation', () => {
       };
       const result = validateCommentInput(invalidInput);
       expect(result.isValid).toBe(false);
-      expect(result.error).toBe('User is required and must be a non-empty string');
+      expect(result.error).toBe('User is required and must be a string between 3 and 50 characters');
     });
 
     it('should reject input where comment is not a string', () => {
@@ -282,7 +282,7 @@ describe('Input Validation', () => {
       };
       const result = validateCommentInput(invalidInput);
       expect(result.isValid).toBe(false);
-      expect(result.error).toBe('Comment is required and must be a non-empty string');
+      expect(result.error).toBe('Comment is required and must be a string between 1 and 500 characters');
     });
   });
 

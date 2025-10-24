@@ -11,6 +11,7 @@ export const comments: Array<{
 }> = [];
 
 import { validateCommentInput } from '../utils/validation.js';
+import { ApiError, HttpStatusCode } from '../utils/errorHandler.js';
 
 const commentsRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) => {
   // Get comments for a poll
@@ -29,8 +30,7 @@ const commentsRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) => {
 
     const validation = validateCommentInput({ user: user || '', comment: comment || '' });
     if (!validation.isValid) {
-      reply.status(400);
-      return { error: validation.error };
+      throw ApiError.badRequest(validation.error);
     }
     const newComment = {
       id: Math.random().toString(36).substr(2, 9),
@@ -50,8 +50,7 @@ const commentsRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) => {
     const { id } = request.params;
     const idx = comments.findIndex(c => c.id === id);
     if (idx === -1) {
-      reply.status(404);
-      return { error: 'Comment not found.' };
+      throw ApiError.notFound('Comment not found.');
     }
     comments.splice(idx, 1);
     reply.status(204);
