@@ -6,8 +6,13 @@ test('should return 429 status and Retry-After header when rate limit is exceede
   const fastify = Fastify();
   await registerRateLimiting(fastify);
 
-  fastify.get('/custom-rate-limit', createRateLimitHandler({ max: 1, timeWindow: 1000 }), async () => {
-    return { message: 'OK' };
+  fastify.get('/custom-rate-limit', {
+    config: {
+      rateLimit: { max: 1, timeWindow: 1000 }
+    },
+    handler: async () => {
+      return { message: 'OK' };
+    }
   });
 
   // First request - should pass
@@ -37,12 +42,22 @@ test('should handle multiple rate limit configurations correctly', async () => {
   const fastify = Fastify();
   await registerRateLimiting(fastify);
 
-  fastify.get('/auth-endpoint', createRateLimitHandler({ max: 1, timeWindow: 1000 }), async () => {
-    return { message: 'Auth OK' };
+  fastify.get('/auth-endpoint', {
+    config: {
+      rateLimit: { max: 1, timeWindow: 1000 },
+    },
+    handler: async () => {
+      return { message: 'Auth OK' };
+    },
   });
 
-  fastify.get('/general-endpoint', createRateLimitHandler({ max: 1, timeWindow: 1000 }), async () => {
-    return { message: 'General OK' };
+  fastify.get('/general-endpoint', {
+    config: {
+      rateLimit: { max: 1, timeWindow: 1000 },
+    },
+    handler: async () => {
+      return { message: 'General OK' };
+    },
   });
 
   // Exceed auth endpoint limit

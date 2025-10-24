@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import Fastify from 'fastify';
-import pollsRoute from '../../src/routes/polls.js';
+import pollsRoute from '~/routes/polls.js';
 import { PrismaClient } from '@prisma/client';
 
 // Mock Prisma
@@ -23,7 +23,7 @@ vi.mock('@prisma/client', () => ({
 }));
 
 // Mock auth middleware
-vi.mock('../../src/middleware/auth.js', () => ({
+vi.mock('~/middleware/auth.js', () => ({
   verifyWalletSignature: vi.fn(),
 }));
 
