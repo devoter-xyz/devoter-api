@@ -62,6 +62,49 @@ export async function verifyWalletSignature(
   // If all validation passes, continue
 }
 
+export async function verifyWalletSignatureFromHeaders(
+  request: FastifyRequest,
+  reply: FastifyReply
+) {
+  const walletAddress = request.headers["x-wallet-address"] as string;
+  const message = request.headers["x-message"] as string;
+  const signature = request.headers["x-signature"] as string;
+
+  if (!walletAddress || !message || !signature) {
+    throw ApiError.badRequest(
+      "Missing required headers: x-wallet-address, x-message, x-signature",
+      "MISSING_AUTH_HEADERS"
+    );
+  }
+
+  // Create a temporary body object for validation, similar to how verifyWalletSignature expects it
+  const tempBody = { walletAddress, message, signature };
+
+  const validation = validateWalletAuthInput(tempBody);
+  if (!validation.isValid) {
+    throw ApiError.badRequest(
+      validation.error || "Invalid wallet authentication input in headers",
+      "INVALID_AUTH_INPUT"
+    );
+  }
+
+  const MAX_SIGNATURE_AGE_MINUTES = parseInt(process.env.MAX_SIGNATURE_AGE_MINUTES || '5', 10);
+  const { isValid, error } = verifySignatureWithTimestamp(
+    message,
+    signature,
+    walletAddress,
+    MAX_SIGNATURE_AGE_MINUTES
+  );
+  if (!isValid) {
+    throw ApiError.unauthorized(
+      "Invalid or expired wallet signature from headers",
+      "INVALID_SIGNATURE",
+      error ? { reason: error } : undefined
+    );
+  }
+  // If all validation passes, continue
+}
+
 // Extend FastifyRequest to include a user property for authenticated API key users
 declare module 'fastify' {
   interface FastifyRequest {

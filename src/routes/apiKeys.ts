@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import { verifyWalletSignature } from "../middleware/auth.js";
+import { verifyWalletSignature, verifyWalletSignatureFromHeaders } from "../middleware/auth.js";
 import { rateLimitConfigs } from "../middleware/rateLimit.js";
 import * as Type from "@sinclair/typebox";
 import {
@@ -146,25 +146,7 @@ export default async function apiKeysRoute(fastify: FastifyInstance) {
     config: {
       rateLimit: rateLimitConfigs.general,
     },
-    preHandler: asyncHandler(async (request, reply) => {
-      // Custom validation for GET request with headers
-      const walletAddress = (request.headers["x-wallet-address"] as string).trim().toLowerCase();
-      const message = request.headers["x-message"] as string;
-      const signature = request.headers["x-signature"] as string;
-
-      if (!walletAddress || !message || !signature) {
-        throw ApiError.badRequest(
-          "Missing required headers: x-wallet-address, x-message, x-signature",
-          "MISSING_AUTH_HEADERS"
-        );
-      }
-
-      // Create a fake body for the middleware
-      request.body = { walletAddress, message, signature };
-
-      // Call the wallet signature verification
-      return verifyWalletSignature(request, reply);
-    }),
+    preHandler: verifyWalletSignatureFromHeaders,
     handler: asyncHandler(async (request, reply) => {
       const walletAddress = (request.headers["x-wallet-address"] as string).trim().toLowerCase();
 
@@ -215,6 +197,82 @@ export default async function apiKeysRoute(fastify: FastifyInstance) {
       return reply.status(HttpStatusCode.OK).send({
         success: true,
         apiKeys,
+      });
+    }),
+  });
+
+  // GET /api-keys/metadata - Get non-sensitive metadata for all API keys for a wallet
+  fastify.get("/api-keys/metadata", {
+    schema: {
+      headers: Type.Object(
+        {
+          "x-wallet-address": Type.RegExp(/^0x[a-fA-F0-9]{40}$/),
+          "x-message": Type.String({ minLength: 1, maxLength: 1000 }),
+          "x-signature": Type.RegExp(/^0x[a-fA-F0-9]{130}$/),
+        },
+        { additionalProperties: true }
+      ),
+      response: {
+        200: Type.Object({
+          success: Type.Literal(true),
+          apiKeys: Type.Array(
+            Type.Object({
+              id: Type.String(),
+              createdAt: Type.String(),
+              scopes: Type.Optional(Type.Array(Type.String())),
+            })
+          ),
+        }),
+        400: Type.Object({
+          success: Type.Literal(false),
+          error: Type.String(),
+        }),
+        404: Type.Object({
+          success: Type.Literal(false),
+          error: Type.String(),
+        }),
+        500: Type.Object({
+          success: Type.Literal(false),
+          error: Type.String(),
+        }),
+      },
+    },
+    config: {
+      rateLimit: rateLimitConfigs.general,
+    },
+    preHandler: verifyWalletSignatureFromHeaders,
+    handler: asyncHandler(async (request, reply) => {
+      const walletAddress = (request.headers["x-wallet-address"] as string).trim().toLowerCase();
+
+      const user = await prisma.apiUser.findUnique({
+        where: { walletAddress },
+        include: {
+          apiKeys: {
+            select: {
+              id: true,
+              createdAt: true,
+              scopes: true, // Assuming 'scopes' field exists in your Prisma model
+            },
+            orderBy: {
+              createdAt: "desc",
+            },
+          },
+        },
+      });
+
+      if (!user) {
+        throw ApiError.notFound("User not found", "USER_NOT_FOUND");
+      }
+
+      const apiKeysMetadata = user.apiKeys.map((key) => ({
+        id: key.id,
+        createdAt: key.createdAt.toISOString(),
+        scopes: key.scopes || [], // Provide an empty array if scopes is null/undefined
+      }));
+
+      return reply.status(HttpStatusCode.OK).send({
+        success: true,
+        apiKeys: apiKeysMetadata,
       });
     }),
   });

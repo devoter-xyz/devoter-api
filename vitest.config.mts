@@ -11,4 +11,9 @@ export default defineConfig({
       exclude: ["node_modules/", "dist/", "prisma/", "test/**", "**/*.test.*"],
     },
   },
+  resolve: {
+    alias: {
+      '~': './dist',
+    },
+  },
 });
