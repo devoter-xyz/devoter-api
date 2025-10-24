@@ -20,12 +20,7 @@ const errorPlugin: FastifyPluginAsync = async (fastify: FastifyInstance) => {
   // Override Fastify's validator compiler.
   // This implementation simply returns the data as-is, assuming TypeBox schemas handle validation.
   // Modify this if you need custom validation logic.
-  fastify.setValidatorCompiler(({ schema }) => {
-    return (data: unknown) => {
-      // Fastify will handle validation using TypeBox schemas
-      return { value: data };
-    };
-  });
+
 
   // Register a global error handler for all uncaught errors in Fastify routes and hooks.
   // This ensures consistent error responses and logging.
