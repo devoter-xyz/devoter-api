@@ -31,7 +31,12 @@ test('GET /notifications returns an empty array initially', async () => {
   });
 
   expect(response.statusCode).toBe(200);
-  expect(response.json()).toEqual([]);
+  expect(response.json()).toEqual({
+    notifications: [],
+    totalCount: 0,
+    limit: 10,
+    offset: 0,
+  });
   expect(mockNotificationStore.getAll()).toEqual([]);
 });
 
@@ -62,7 +67,12 @@ test('POST /notifications creates a new notification', async () => {
     url: '/notifications',
   });
   expect(getResponse.statusCode).toBe(200);
-  expect(getResponse.json()).toEqual([responseBody]);
+  expect(getResponse.json()).toEqual({
+    notifications: [responseBody],
+    totalCount: 1,
+    limit: 10,
+    offset: 0,
+  });
 });
 
 test('POST /notifications returns 400 if user is missing', async () => {
