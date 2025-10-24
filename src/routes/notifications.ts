@@ -35,10 +35,29 @@ interface NotificationsRoutesOptions extends FastifyPluginOptions {
 async function notificationsRoutes(fastify: FastifyInstance, options: NotificationsRoutesOptions) {
   const store = options.notificationStore || defaultNotificationStore;
 
-  // GET /notifications - fetch all notifications
-  fastify.get('/notifications', async (request, reply) => {
-    // Return all notifications
-    return store.getAll();
+  // GET /notifications - fetch all notifications with pagination
+  fastify.get('/notifications', {
+    schema: {
+      querystring: {
+        type: 'object',
+        properties: {
+          limit: { type: 'integer', minimum: 1, default: 10 },
+          offset: { type: 'integer', minimum: 0, default: 0 },
+        },
+      },
+    },
+  }, async (request, reply) => {
+    const { limit, offset } = request.query as { limit: number; offset: number };
+
+    const allNotifications = store.getAll();
+    const paginatedNotifications = allNotifications.slice(offset, offset + limit);
+
+    return {
+      notifications: paginatedNotifications,
+      totalCount: allNotifications.length,
+      limit,
+      offset,
+    };
   });
 
   // POST /notifications - create a new notification
