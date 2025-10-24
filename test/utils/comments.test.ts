@@ -72,6 +72,63 @@ describe('Comments Routes', () => {
   });
 
   describe('POST /poll/:pollId', () => {
+    it('should successfully post a new comment with trimmed user and comment', async () => {
+      const response = await fastify.inject({
+        method: 'POST',
+        url: '/poll/poll789',
+        payload: {
+          user: '  newUserWithSpaces  ',
+          comment: '  This is a new comment with spaces.  ',
+        },
+      });
+
+      expect(response.statusCode).toBe(201);
+      const payload = JSON.parse(response.payload);
+      expect(payload).toHaveProperty('id');
+      expect(payload.pollId).toBe('poll789');
+      expect(payload.user).toBe('newUserWithSpaces'); // Should be trimmed
+      expect(payload.comment).toBe('This is a new comment with spaces.'); // Should be trimmed
+      expect(comments.length).toBe(1);
+    });
+
+    it('should return 400 if trimmed user is too short', async () => {
+      const response = await fastify.inject({
+        method: 'POST',
+        url: '/poll/poll789',
+        payload: {
+          user: '  a  ', // Trimmed length is 1, min is 3
+          comment: 'This is a new comment.',
+        },
+      });
+
+      expect(response.statusCode).toBe(400);
+      expect(JSON.parse(response.payload)).toEqual({
+        statusCode: 400,
+        code: 'BAD_REQUEST',
+        message: 'User is required and must be a string between 3 and 50 characters',
+      });
+      expect(comments.length).toBe(0);
+    });
+
+    it('should return 400 if trimmed comment is too short (empty)', async () => {
+      const response = await fastify.inject({
+        method: 'POST',
+        url: '/poll/poll789',
+        payload: {
+          user: 'newUser',
+          comment: '   ', // Trimmed length is 0, min is 1
+        },
+      });
+
+      expect(response.statusCode).toBe(400);
+      expect(JSON.parse(response.payload)).toEqual({
+        statusCode: 400,
+        code: 'BAD_REQUEST',
+        message: 'Comment is required and must be a string between 1 and 500 characters',
+      });
+      expect(comments.length).toBe(0);
+    });
+
     it('should successfully post a new comment', async () => {
       const response = await fastify.inject({
         method: 'POST',

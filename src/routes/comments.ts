@@ -28,15 +28,20 @@ const commentsRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) => {
     const { pollId } = request.params;
     const { user, comment } = request.body || {};
 
-    const validation = validateCommentInput({ user: user || '', comment: comment || '' });
+    const rawUser = user || '';
+    const rawComment = comment || '';
+    const trimmedUser = typeof rawUser === 'string' ? rawUser.trim() : '';
+    const trimmedComment = typeof rawComment === 'string' ? rawComment.trim() : '';
+
+    const validation = validateCommentInput({ user: trimmedUser, comment: trimmedComment });
     if (!validation.isValid) {
       throw ApiError.badRequest(validation.error);
     }
     const newComment = {
       id: Math.random().toString(36).substr(2, 9),
       pollId,
-      user: user as string,
-      comment: comment as string,
+      user: trimmedUser,
+      comment: trimmedComment,
       createdAt: new Date(),
     };
     comments.push(newComment);
