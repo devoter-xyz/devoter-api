@@ -31,12 +31,12 @@ export function validateCommentInput(input: CommentInput): ValidationResult {
 
   const { user, comment } = input;
 
-  if (!Object.prototype.hasOwnProperty.call(input, "user") || !user || typeof user !== "string" || user.trim().length === 0) {
-    return { isValid: false, error: "User is required and must be a non-empty string" };
+  if (!Object.prototype.hasOwnProperty.call(input, "user") || typeof user !== "string" || user.trim().length < 3 || user.trim().length > 50) {
+    return { isValid: false, error: "User is required and must be a string between 3 and 50 characters" };
   }
 
-  if (!Object.prototype.hasOwnProperty.call(input, "comment") || !comment || typeof comment !== "string" || comment.trim().length === 0) {
-    return { isValid: false, error: "Comment is required and must be a non-empty string" };
+  if (!Object.prototype.hasOwnProperty.call(input, "comment") || typeof comment !== "string" || comment.trim().length < 1 || comment.trim().length > 500) {
+    return { isValid: false, error: "Comment is required and must be a string between 1 and 500 characters" };
   }
 
   return { isValid: true };

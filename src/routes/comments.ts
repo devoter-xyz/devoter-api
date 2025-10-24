@@ -11,6 +11,7 @@ export const comments: Array<{
 }> = [];
 
 import { validateCommentInput } from '../utils/validation.js';
+import { ApiError, HttpStatusCode } from '../utils/errorHandler.js';
 
 const commentsRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) => {
   // Get comments for a poll
@@ -27,16 +28,20 @@ const commentsRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) => {
     const { pollId } = request.params;
     const { user, comment } = request.body || {};
 
-    const validation = validateCommentInput({ user: user || '', comment: comment || '' });
+    const rawUser = user || '';
+    const rawComment = comment || '';
+    const trimmedUser = typeof rawUser === 'string' ? rawUser.trim() : '';
+    const trimmedComment = typeof rawComment === 'string' ? rawComment.trim() : '';
+
+    const validation = validateCommentInput({ user: trimmedUser, comment: trimmedComment });
     if (!validation.isValid) {
-      reply.status(400);
-      return { error: validation.error };
+      throw ApiError.badRequest(validation.error);
     }
     const newComment = {
       id: Math.random().toString(36).substr(2, 9),
       pollId,
-      user: user as string,
-      comment: comment as string,
+      user: trimmedUser,
+      comment: trimmedComment,
       createdAt: new Date(),
     };
     comments.push(newComment);
@@ -50,8 +55,7 @@ const commentsRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) => {
     const { id } = request.params;
     const idx = comments.findIndex(c => c.id === id);
     if (idx === -1) {
-      reply.status(404);
-      return { error: 'Comment not found.' };
+      throw ApiError.notFound('Comment not found.');
     }
     comments.splice(idx, 1);
     reply.status(204);
