@@ -15,6 +15,7 @@ import {
 // Import custom error handling plugin
 import errorPlugin from "./plugins/errorPlugin.js";
 import requestTimingPlugin from "./plugins/requestTiming.js";
+import apiKeysRoutes from "./routes/apiKeys.js";
 
 
 // Load environment variables from .env file into process.env
