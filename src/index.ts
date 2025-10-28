@@ -66,8 +66,8 @@ const start = async () => {
           timestamp: new Date().toISOString(),
           service: "devoter-api",
         };
-      }
-    );
+      },
+    });
 
     // Register API routes
     // - /register: Handles user or entity registration

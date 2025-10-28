@@ -19,9 +19,9 @@ export default async function apiKeysRoute(fastify: FastifyInstance) {
   fastify.post("/api-keys", {
     schema: {
       body: Type.Object({
-        walletAddress: Type.RegExp(/^0x[a-fA-F0-9]{40}$/),
+        walletAddress: Type.String({ pattern: '^0x[a-fA-F0-9]{40}$' }),
         message: Type.String({ minLength: 1, maxLength: 1000 }),
-        signature: Type.RegExp(/^0x[a-fA-F0-9]{130}$/),
+        signature: Type.String({ pattern: '^0x[a-fA-F0-9]{130}$' }),
       }),
       response: {
         201: Type.Object({
@@ -110,9 +110,9 @@ export default async function apiKeysRoute(fastify: FastifyInstance) {
     schema: {
       headers: Type.Object(
         {
-          "x-wallet-address": Type.RegExp(/^0x[a-fA-F0-9]{40}$/),
+          "x-wallet-address": Type.String({ pattern: '^0x[a-fA-F0-9]{40}$' }),
           "x-message": Type.String({ minLength: 1, maxLength: 1000 }),
-          "x-signature": Type.RegExp(/^0x[a-fA-F0-9]{130}$/),
+          "x-signature": Type.String({ pattern: '^0x[a-fA-F0-9]{130}$' }),
         },
         { additionalProperties: true }
       ),
@@ -206,9 +206,9 @@ export default async function apiKeysRoute(fastify: FastifyInstance) {
     schema: {
       headers: Type.Object(
         {
-          "x-wallet-address": Type.RegExp(/^0x[a-fA-F0-9]{40}$/),
+          "x-wallet-address": Type.String({ pattern: '^0x[a-fA-F0-9]{40}$' }),
           "x-message": Type.String({ minLength: 1, maxLength: 1000 }),
-          "x-signature": Type.RegExp(/^0x[a-fA-F0-9]{130}$/),
+          "x-signature": Type.String({ pattern: '^0x[a-fA-F0-9]{130}$' }),
         },
         { additionalProperties: true }
       ),
