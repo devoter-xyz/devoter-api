@@ -1,11 +1,10 @@
 import { test, beforeAll, afterAll, expect } from 'vitest';
 import { build } from '../src/index.js';
 import { prisma } from '../src/lib/prisma.js';
-import { generateWallet } from 'ethereum-waffle';
-import { signMessage } from '../src/utils/verifySignature.js';
+import { Wallet } from 'ethers';
 
 let app;
-let wallet;
+let wallet: Wallet;
 let message;
 let signature;
 

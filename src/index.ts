@@ -35,67 +35,31 @@ const server = fastify({
  * Starts the Fastify server with all middleware, plugins, and routes registered.
  * Handles environment configuration, error handling, CORS, rate limiting, and API routes.
  */
-const start = async () => {
-  try {
-    // Register error handling plugin first to catch errors from subsequent plugins/routes
-    await server.register(errorPlugin);
-    // Register request timing plugin to measure and log request durations
-    await server.register(requestTimingPlugin);
+if (process.env.NODE_ENV !== "test") {
+  const start = async () => {
+    try {
+      const server = await build();
+      // Parse and validate the port from environment variables (default: 3000)
+      const portStr = process.env.PORT || "3000";
+      const port = Number(portStr);
+      if (isNaN(port) || port <= 0 || !Number.isInteger(port)) {
+        server.log.error(`Invalid PORT environment variable: '${portStr}'. Must be a positive integer.`);
+        process.exit(1);
+      }
+      // Parse the host from environment variables (default: localhost)
+      const host = process.env.HOST || "localhost";
 
-    // Register CORS (Cross-Origin Resource Sharing) to allow requests from specified origins
-    await server.register((await import("@fastify/cors")).default, {
-      origin: process.env.CORS_ORIGIN || "http://localhost:3000",
-      credentials: true,
-    });
-
-    // Register rate limiting middleware to protect endpoints from abuse
-    await registerRateLimiting(server);
-
-    // Health check endpoint with rate limiting
-    // Returns service status, timestamp, and name
-    server.get(
-      "/health",
-      {
-        ...createRateLimitHandler({
-          max: 2, // Allow only 2 requests for health check
-          timeWindow: 10000, // per 10 seconds
-        }),
-        handler: async () => {
-        return {
-          status: "healthy",
-          timestamp: new Date().toISOString(),
-          service: "devoter-api",
-        };
-      },
-    });
-
-    // Register API routes
-    // - /register: Handles user or entity registration
-    // - /apiKeys: Handles API key management
-    // - /polls: Handles poll creation, voting, and results
-    await server.register(import("./routes/register.js"));
-    await server.register(import("./routes/apiKeys.js"));
-    await server.register(import("./routes/polls.js"));
-
-    // Parse and validate the port from environment variables (default: 3000)
-    const portStr = process.env.PORT || "3000";
-    const port = Number(portStr);
-    if (isNaN(port) || port <= 0 || !Number.isInteger(port)) {
-      server.log.error(`Invalid PORT environment variable: '${portStr}'. Must be a positive integer.`);
+      // Start the Fastify server and listen on the specified host and port
+      await server.listen({ port, host });
+      server.log.info(`🚀 Server listening at http://${host}:${port}`);
+    } catch (err) {
+      // Log startup errors and exit process with failure code
+      const server = fastify(); // Create a temporary server instance for logging
+      server.log.error({ err }, "Startup error occurred in Fastify server");
       process.exit(1);
     }
-    // Parse the host from environment variables (default: localhost)
-    const host = process.env.HOST || "localhost";
+  };
 
-    // Start the Fastify server and listen on the specified host and port
-    await server.listen({ port, host });
-    server.log.info(`🚀 Server listening at http://${host}:${port}`);
-  } catch (err) {
-    // Log startup errors and exit process with failure code
-    server.log.error({ err }, "Startup error occurred in Fastify server");
-    process.exit(1);
-  }
-};
-
-// Start the server
-start();
+  // Start the server
+  start();
+}

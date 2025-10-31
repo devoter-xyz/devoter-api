@@ -154,3 +154,12 @@ export default async function pollsRoute(fastify: FastifyInstance) {
     config: {
       rateLimit: rateLimitConfigs.registration,
     },
+    preHandler: [verifyWalletSignature],
+  }, asyncHandler(async (request, reply) => {
+    // Placeholder for voting logic
+    reply.code(201).send({
+      success: true,
+      message: "Vote recorded successfully (placeholder)",
+    });
+  }));
+}

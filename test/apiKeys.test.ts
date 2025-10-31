@@ -38,8 +38,9 @@ describe('API Keys Route', () => {
     vi.clearAllMocks();
 
     // Ensure verifyWalletSignatureFromHeaders is mocked to pass
-    (vi.mocked(await import('~/middleware/auth.js'))).verifyWalletSignatureFromHeaders.mockImplementation(async (request, reply) => {
-      // Simulate successful verification by doing nothing
+    (vi.mocked(await import('../../src/middleware/auth.js'))).verifyWalletSignatureFromHeaders.mockImplementation(async (request, reply) => {
+      // Simulate successful verification by doing nothing and resolving the promise
+      return Promise.resolve();
     });
   });
 
