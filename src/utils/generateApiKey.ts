@@ -64,16 +64,24 @@ export function maskApiKey(apiKey: string, visibleChars: number = 8): string {
  * @param apiKey - The API key to validate
  * @returns True if the API key has a valid format
  */
-export function isValidApiKeyFormat(apiKey: string): boolean {
-  // Check if it matches our generated format: prefix.timestamp.randompart
+export function isValidApiKeyFormat(apiKey: string, strictDotDelimiter: boolean = false): boolean {
+  let normalizedKey = apiKey;
+  if (!strictDotDelimiter && apiKey.includes('_')) {
+    normalizedKey = apiKey.replace(/_/g, '.');
+    // Log that a legacy key format was used
+    // In a real application, you might use a proper logging library here
+    console.log('Legacy API key format detected and normalized.');
+  }
+
+  // Check if it matches our generated format: prefix.timestamp.randompart (now always with dots)
   const apiKeyPattern = /^[a-zA-Z]{2,}\.[0-9a-z]+\.[A-Za-z0-9_-]{32,}$/;
   
-  if (!apiKeyPattern.test(apiKey)) {
+  if (!apiKeyPattern.test(normalizedKey)) {
     return false;
   }
   
   // Extract and validate the timestamp part
-  const parts = apiKey.split('.');
+  const parts = normalizedKey.split('.');
   
   // Ensure the timestamp part exists
   if (parts.length < 2 || !parts[1]) {

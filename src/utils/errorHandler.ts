@@ -193,7 +193,7 @@ export function handleError(
     );
   } else {
     // Generic error handling
-    const errorMessage = (error instanceof Error && error.message) ? error.message : "An unexpected error occurred";
+    const errorMessage = "An unexpected error occurred";
     apiError = ApiError.internal(errorMessage);
   }
 

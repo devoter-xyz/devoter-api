@@ -43,9 +43,13 @@ describe('Error Handling', () => {
       expect(mockReply.status).toHaveBeenCalledWith(HttpStatusCode.INTERNAL_SERVER_ERROR);
       expect(mockReply.send).toHaveBeenCalledWith({
         statusCode: HttpStatusCode.INTERNAL_SERVER_ERROR,
-        message: 'Something went wrong',
+        message: 'An unexpected error occurred',
         code: 'INTERNAL_ERROR',
       });
+      // Ensure no stack trace or other sensitive fields are sent
+      const sentPayload = mockReply.send.mock.calls[0][0];
+      expect(sentPayload).not.toHaveProperty('stack');
+      expect(sentPayload.message).not.toEqual(genericError.message);
       expect(mockRequest.log.error).toHaveBeenCalledWith(genericError);
     });
 

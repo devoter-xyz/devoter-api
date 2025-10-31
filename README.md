@@ -15,6 +15,26 @@ It provides a fast, secure, and scalable API built with [Fastify](https://fastif
 
 ---
 
+## ⚠️ Breaking Changes & Migration Guide
+
+### API Key Delimiter Change
+
+**Effective immediately, the delimiter for newly generated API keys has changed from `_` (underscore) to `.` (dot).** This change improves consistency and aligns with common API key formatting standards.
+
+**Impact:**
+
+*   **Existing API Keys**: For backward compatibility, the API will continue to accept and normalize existing underscore-delimited keys during a grace period. However, it is **highly recommended** to migrate all active API keys to the new dot-delimited format.
+*   **New API Key Generation**: All newly generated API keys will use the `.` delimiter.
+
+**Migration Steps:**
+
+1.  **Re-issue/Rotate API Keys**: During the grace period, administrators should re-issue or rotate all active API keys that use the `_` delimiter. A dedicated admin tool or script will be provided to assist with this process.
+2.  **Update Client Integrations**: Any client applications, SDKs, or custom scripts that generate, validate, or parse API keys should be updated to expect and generate the new `.` delimited format.
+3.  **Monitor Usage**: During the grace period, monitor API logs for warnings indicating the use of legacy underscore-delimited keys. This will help identify clients that still need to be updated.
+4.  **Strict Mode Enforcement**: After the grace period, a configuration option will be available to enable strict validation, rejecting all API keys that do not use the `.` delimiter.
+
+---
+
 ## 📂 Project Structure
 
 ```bash

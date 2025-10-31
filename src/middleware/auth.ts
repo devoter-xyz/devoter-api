@@ -146,16 +146,23 @@ export async function verifyApiKey(
     );
   }
 
-  // 3. Validate API key format using helper function
-  if (!isValidApiKeyFormat(token)) {
+  // Normalize the token: replace underscore delimiters with dot delimiters for backward compatibility
+  let normalizedToken = token;
+  if (token.includes('_')) {
+    normalizedToken = token.replace(/_/g, '.');
+    request.log.warn('Legacy API key format detected and normalized during authentication.');
+  }
+
+  // 3. Validate API key format using helper function (now with the normalized token)
+  if (!isValidApiKeyFormat(normalizedToken)) {
     throw ApiError.unauthorized(
       "Invalid API key format",
       "INVALID_API_KEY_FORMAT"
     );
   }
 
-  // 4. Hash the incoming token for database lookup
-  const hashedToken = hashApiKey(token);
+  // 4. Hash the incoming token (now normalized) for database lookup
+  const hashedToken = hashApiKey(normalizedToken);
 
   // 5. Look up the API key in the database
   const apiKeyRecord = await prisma.apiKey.findFirst({
