@@ -67,9 +67,14 @@ export function maskApiKey(apiKey: string, visibleChars: number = 8): string {
 export function isValidApiKeyFormat(apiKey: string, strictDotDelimiter: boolean = false): boolean {
   let normalizedKey = apiKey;
   if (!strictDotDelimiter && apiKey.includes('_')) {
-    normalizedKey = apiKey.replace(/_/g, '.');
-    // Log that a legacy key format was used
-    // In a real application, you might use a proper logging library here
+    // Only replace the first two underscores (delimiters between prefix, timestamp, and random part)
+    // The random part may contain underscores as it uses base64url encoding
+    const parts = apiKey.split('_');
+    if (parts.length >= 3) {
+      normalizedKey = `${parts[0]}.${parts[1]}.${parts.slice(2).join('_')}`;
+    } else {
+      normalizedKey = apiKey.replace(/_/g, '.');
+    }
     console.log('Legacy API key format detected and normalized.');
   }
 

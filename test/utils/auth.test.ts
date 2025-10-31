@@ -77,6 +77,7 @@ test('should return unauthorized JSON response for invalid wallet signature', as
       details: { reason: 'Invalid signature' },
     })
   );
+}); // Added missing closing brace
 
 test('should return bad request JSON response for missing request body', async () => {
   const request = {

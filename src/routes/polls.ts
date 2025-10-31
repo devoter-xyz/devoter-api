@@ -17,9 +17,9 @@ export default async function pollsRoute(fastify: FastifyInstance) {
         title: Type.String({ minLength: 1, maxLength: 200 }),
         description: Type.Optional(Type.String({ maxLength: 1000 })),
         options: Type.Array(Type.String(), { minItems: 2, maxItems: 10 }),
-        walletAddress: Type.RegExp(/^0x[a-fA-F0-9]{40}$/),
+        walletAddress: Type.String({ pattern: '^0x[a-fA-F0-9]{40}$' }),
         message: Type.String({ minLength: 1, maxLength: 1000 }),
-        signature: Type.RegExp(/^0x[a-fA-F0-9]{130}$/),
+        signature: Type.String({ pattern: '^0x[a-fA-F0-9]{130}$' }),
       }),
       response: {
         201: Type.Object({
@@ -156,10 +156,70 @@ export default async function pollsRoute(fastify: FastifyInstance) {
     },
     preHandler: [verifyWalletSignature],
   }, asyncHandler(async (request, reply) => {
-    // Placeholder for voting logic
+    const { id: pollId } = request.params as { id: string };
+    const { optionIndex, walletAddress } = request.body as { optionIndex: number; walletAddress: string };
+
+    // 1. Find the poll
+    const poll = await prisma.poll.findUnique({
+      where: { id: pollId },
+    });
+
+    if (!poll) {
+      throw new ApiError(HttpStatusCode.NOT_FOUND, "Poll not found");
+    }
+
+    // 2. Validate optionIndex
+    const options = JSON.parse(poll.options as string);
+    if (optionIndex < 0 || optionIndex >= options.length) {
+      throw new ApiError(HttpStatusCode.BAD_REQUEST, "Invalid option index");
+    }
+
+    // 3. Find the user
+    const user = await prisma.apiUser.findUnique({
+      where: { walletAddress },
+    });
+
+    if (!user) {
+      throw new ApiError(HttpStatusCode.NOT_FOUND, "User not found");
+    }
+
+    // 4. Check if user has already voted on this poll
+    const existingVote = await prisma.vote.findFirst({
+      where: {
+        pollId: poll.id,
+        voterId: user.id,
+      },
+    });
+
+    if (existingVote) {
+      throw new ApiError(HttpStatusCode.BAD_REQUEST, "User has already voted on this poll");
+    }
+
+    // 5. Persist the vote and update poll's vote count in a transaction
+    await prisma.$transaction(async (tx) => {
+      await tx.vote.create({
+        data: {
+          pollId: poll.id,
+          voterId: user.id,
+          optionIndex,
+        },
+      });
+
+      // Increment vote count for the selected option
+      const currentVotes = JSON.parse(poll.votes as string || '[]');
+      currentVotes[optionIndex] = (currentVotes[optionIndex] || 0) + 1;
+
+      await tx.poll.update({
+        where: { id: poll.id },
+        data: {
+          votes: JSON.stringify(currentVotes),
+        },
+      });
+    });
+
     reply.code(201).send({
       success: true,
-      message: "Vote recorded successfully (placeholder)",
+      message: "Vote recorded successfully",
     });
   }));
 }

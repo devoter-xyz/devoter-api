@@ -123,7 +123,7 @@ describe('API Keys Route', () => {
 
     it('should return 400 for missing headers', async () => {
       // Temporarily restore original implementation to test missing headers
-      (vi.mocked(await import('../../src/middleware/auth.js'))).verifyWalletSignatureFromHeaders.mockRestore();
+      (vi.mocked(await import('../src/middleware/auth.ts'))).verifyWalletSignatureFromHeaders.mockRestore();
 
       const response = await app.inject({
         method: 'GET',
