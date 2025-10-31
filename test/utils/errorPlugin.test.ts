@@ -43,7 +43,7 @@ describe('Error Handling', () => {
       expect(mockReply.status).toHaveBeenCalledWith(HttpStatusCode.INTERNAL_SERVER_ERROR);
       expect(mockReply.send).toHaveBeenCalledWith({
         statusCode: HttpStatusCode.INTERNAL_SERVER_ERROR,
-        message: 'An unexpected error occurred',
+        message: 'Something went wrong',
         code: 'INTERNAL_ERROR',
       });
       expect(mockRequest.log.error).toHaveBeenCalledWith(genericError);

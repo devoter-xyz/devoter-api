@@ -1,4 +1,5 @@
 import { ethers } from "ethers";
+import * as crypto from 'crypto';
 
 /**
  * Verifies that a message was signed by the specified wallet address
@@ -26,8 +27,21 @@ export function verifySignature(
     // Recover the address from the signature
     const recoveredAddress = ethers.verifyMessage(message, signature);
 
-    // Compare addresses (case-insensitive)
-    if (recoveredAddress.toLowerCase() === walletAddress.toLowerCase()) {
+    // Convert addresses to buffers for timing-safe comparison
+    const recoveredBuffer = Buffer.from(recoveredAddress.toLowerCase());
+    const walletBuffer = Buffer.from(walletAddress.toLowerCase());
+
+    // Ensure buffers are of the same length to prevent timing leaks
+    // Pad with a non-matching character if lengths differ to maintain timing safety
+    const maxLength = Math.max(recoveredBuffer.length, walletBuffer.length);
+    const paddedRecovered = Buffer.alloc(maxLength, 0);
+    const paddedWallet = Buffer.alloc(maxLength, 0);
+
+    recoveredBuffer.copy(paddedRecovered);
+    walletBuffer.copy(paddedWallet);
+
+    // Compare addresses using timing-safe comparison
+    if (crypto.timingSafeEqual(paddedRecovered, paddedWallet)) {
       return { isValid: true };
     } else {
       return { isValid: false, error: "Signature does not match wallet address" };
@@ -107,6 +121,10 @@ export function generateSignMessage(purpose: string): string {
  */
 export function isValidEthereumAddress(address: string): boolean {
   try {
+    // Explicitly check for '0x' prefix first
+    if (typeof address !== 'string' || !address.startsWith('0x')) {
+      return false;
+    }
     return ethers.isAddress(address);
   } catch {
     return false;

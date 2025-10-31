@@ -70,10 +70,10 @@ describe('API Key Generation', () => {
       const apiKey = generateUniqueApiKey(userId);
       
       // Should start with default prefix 'dv'
-      expect(apiKey.startsWith('dv_')).toBe(true);
+      expect(apiKey.startsWith('dv.')).toBe(true);
       
       // Should have the format: prefix_timestamp_randompart
-      const parts = apiKey.split('_');
+      const parts = apiKey.split('.');
       expect(parts.length).toBeGreaterThanOrEqual(3);
       expect(parts[0]).toBe('dv');
       
@@ -91,9 +91,9 @@ describe('API Key Generation', () => {
       const prefix = 'test';
       const apiKey = generateUniqueApiKey(userId, prefix);
       
-      expect(apiKey.startsWith('test_')).toBe(true);
+      expect(apiKey.startsWith('test.')).toBe(true);
       
-      const parts = apiKey.split('_');
+      const parts = apiKey.split('.');
       expect(parts.length).toBeGreaterThanOrEqual(3);
       expect(parts[0]).toBe('test');
     });
@@ -178,9 +178,8 @@ describe('API Key Generation', () => {
       // Test with custom valid keys that have valid timestamps
       const currentTimestamp = Date.now().toString(36);
       const validKeys = [
-        `dv_${currentTimestamp}_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefgh`,
-        `test_${currentTimestamp}_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefgh`,
-        `ab_${currentTimestamp}_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmn`
+        `dv.${Date.now().toString(36)}.${'a'.repeat(32)}`,
+        `custom.${(Date.now() - 1000).toString(36)}.${'b'.repeat(32)}`,
       ];
       
       validKeys.forEach(key => {
@@ -237,7 +236,7 @@ describe('API Key Generation', () => {
       
       // Each key should be valid
       keys.forEach(key => {
-        expect(key.startsWith('dv_')).toBe(true);
+        expect(key.startsWith('dv.')).toBe(true);
         expect(isValidApiKeyFormat(key)).toBe(true);
       });
     });

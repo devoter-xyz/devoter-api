@@ -32,7 +32,7 @@ export function generateApiKey(length: number = 32, seed?: string): string {
 export function generateUniqueApiKey(userId: string, prefix: string = 'dv'): string {
   const randomPart = generateApiKey(24); // 24 bytes = 32 chars in base64url
   const timestamp = Date.now().toString(36); // Compact timestamp
-  return `${prefix}_${timestamp}_${randomPart}`;
+  return `${prefix}.${timestamp}.${randomPart}`;
 }
 
 /**
@@ -65,15 +65,15 @@ export function maskApiKey(apiKey: string, visibleChars: number = 8): string {
  * @returns True if the API key has a valid format
  */
 export function isValidApiKeyFormat(apiKey: string): boolean {
-  // Check if it matches our generated format: prefix_timestamp_randompart
-  const apiKeyPattern = /^[a-zA-Z]{2,}_[0-9a-z]+_[A-Za-z0-9_-]{32,}$/;
+  // Check if it matches our generated format: prefix.timestamp.randompart
+  const apiKeyPattern = /^[a-zA-Z]{2,}\.[0-9a-z]+\.[A-Za-z0-9_-]{32,}$/;
   
   if (!apiKeyPattern.test(apiKey)) {
     return false;
   }
   
   // Extract and validate the timestamp part
-  const parts = apiKey.split('_');
+  const parts = apiKey.split('.');
   
   // Ensure the timestamp part exists
   if (parts.length < 2 || !parts[1]) {
