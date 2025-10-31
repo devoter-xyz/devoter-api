@@ -195,25 +195,42 @@ export default async function pollsRoute(fastify: FastifyInstance) {
       throw new ApiError(HttpStatusCode.BAD_REQUEST, "User has already voted on this poll");
     }
 
-    // 5. Persist the vote and update poll's vote count in a transaction
+    // In src/routes/polls.ts around lines 198 to 218, the transaction uses a stale
+    // poll snapshot and may create sparse arrays; re-read the poll votes inside the
+    // transaction (e.g., tx.poll.findUnique/ findFirst) to get the current votes,
+    // parse them, normalize the array to the poll's options length by filling missing
+    // indexes with 0 (so no sparse/null entries), increment the chosen optionIndex,
+    // then create the vote and update the poll.votes with the JSON-stringified
+    // normalized array — all using the same tx to avoid lost updates under
+    // concurrency.
     await prisma.$transaction(async (tx) => {
-      await tx.vote.create({
-        data: {
-          pollId: poll.id,
-          voterId: user.id,
-          optionIndex,
-        },
+      // Re-check duplicate vote inside transaction
+      const existingVoteInsideTx = await tx.vote.findFirst({ where: { pollId: poll.id, voterId: user.id } });
+      if (existingVoteInsideTx) {
+        throw new ApiError(HttpStatusCode.BAD_REQUEST, "User has already voted on this poll");
+      }
+
+      // Read latest votes (and options if you prefer) inside the transaction
+      const pollForUpdate = await tx.poll.findUnique({
+        where: { id: poll.id },
+        select: { votes: true, options: true },
       });
 
-      // Increment vote count for the selected option
-      const currentVotes = JSON.parse(poll.votes as string || '[]');
-      currentVotes[optionIndex] = (currentVotes[optionIndex] || 0) + 1;
+      const parsedOptions = JSON.parse(pollForUpdate?.options ?? (poll.options as string));
+      const currentVotes = JSON.parse(pollForUpdate?.votes ?? '[]');
+
+      // Normalize votes array to options length without sparse entries
+      const normalizedVotes = Array.from({ length: parsedOptions.length }, (_, i) => Number(currentVotes[i] ?? 0));
+      normalizedVotes[optionIndex] = (normalizedVotes[optionIndex] || 0) + 1;
+
+      // Create vote and update poll within same tx
+      await tx.vote.create({
+        data: { pollId: poll.id, voterId: user.id, optionIndex },
+      });
 
       await tx.poll.update({
         where: { id: poll.id },
-        data: {
-          votes: JSON.stringify(currentVotes),
-        },
+        data: { votes: JSON.stringify(normalizedVotes) },
       });
     });
 
