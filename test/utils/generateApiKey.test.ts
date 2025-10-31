@@ -70,10 +70,10 @@ describe('API Key Generation', () => {
       const apiKey = generateUniqueApiKey(userId);
       
       // Should start with default prefix 'dv'
-      expect(apiKey.startsWith('dv_')).toBe(true);
+      expect(apiKey.startsWith('dv.')).toBe(true);
       
       // Should have the format: prefix_timestamp_randompart
-      const parts = apiKey.split('_');
+      const parts = apiKey.split('.');
       expect(parts.length).toBeGreaterThanOrEqual(3);
       expect(parts[0]).toBe('dv');
       
@@ -91,9 +91,9 @@ describe('API Key Generation', () => {
       const prefix = 'test';
       const apiKey = generateUniqueApiKey(userId, prefix);
       
-      expect(apiKey.startsWith('test_')).toBe(true);
+      expect(apiKey.startsWith('test.')).toBe(true);
       
-      const parts = apiKey.split('_');
+      const parts = apiKey.split('.');
       expect(parts.length).toBeGreaterThanOrEqual(3);
       expect(parts[0]).toBe('test');
     });
@@ -178,14 +178,26 @@ describe('API Key Generation', () => {
       // Test with custom valid keys that have valid timestamps
       const currentTimestamp = Date.now().toString(36);
       const validKeys = [
-        `dv_${currentTimestamp}_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefgh`,
-        `test_${currentTimestamp}_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefgh`,
-        `ab_${currentTimestamp}_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmn`
+        `dv.${Date.now().toString(36)}.${'a'.repeat(32)}`,
+        `custom.${(Date.now() - 1000).toString(36)}.${'b'.repeat(32)}`,
       ];
       
       validKeys.forEach(key => {
         expect(isValidApiKeyFormat(key)).toBe(true);
+        expect(isValidApiKeyFormat(key, true)).toBe(true); // Should also be valid in strict mode
       });
+    });
+
+    it('should return true for legacy underscore-delimited API keys when not in strict mode', () => {
+      const currentTimestamp = Date.now().toString(36);
+      const legacyKey = `dv_${currentTimestamp}_${'c'.repeat(32)}`;
+      expect(isValidApiKeyFormat(legacyKey)).toBe(true);
+    });
+
+    it('should return false for legacy underscore-delimited API keys when in strict mode', () => {
+      const currentTimestamp = Date.now().toString(36);
+      const legacyKey = `dv_${currentTimestamp}_${'d'.repeat(32)}`;
+      expect(isValidApiKeyFormat(legacyKey, true)).toBe(false);
     });
 
   // Should reject API keys with invalid format (missing parts, invalid chars, etc.)
@@ -203,6 +215,7 @@ describe('API Key Generation', () => {
       
       invalidKeys.forEach(key => {
         expect(isValidApiKeyFormat(key)).toBe(false);
+        expect(isValidApiKeyFormat(key, true)).toBe(false); // Should also be invalid in strict mode
       });
     });
     
@@ -212,15 +225,19 @@ describe('API Key Generation', () => {
       const futureTimestamp = (currentTimestamp + 1000000).toString(36); // Far future
       const invalidTimestampKeys = [
         // Future timestamp (more than buffer allows)
+        `dv.${futureTimestamp}.ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefgh`,
         `dv_${futureTimestamp}_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefgh`,
         // Invalid timestamp format (not a valid base36 number)
+        'dv.invalid!.ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefgh',
         'dv_invalid!_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefgh',
         // Negative timestamp (converted to base36)
+        'dv.-1.ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefgh',
         'dv_-1_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefgh'
       ];
       
       invalidTimestampKeys.forEach(key => {
         expect(isValidApiKeyFormat(key)).toBe(false);
+        expect(isValidApiKeyFormat(key, true)).toBe(false); // Should also be invalid in strict mode
       });
     });
   });
@@ -237,7 +254,7 @@ describe('API Key Generation', () => {
       
       // Each key should be valid
       keys.forEach(key => {
-        expect(key.startsWith('dv_')).toBe(true);
+        expect(key.startsWith('dv.')).toBe(true);
         expect(isValidApiKeyFormat(key)).toBe(true);
       });
     });

@@ -18,7 +18,7 @@ vi.mock('@prisma/client', () => ({
 }));
 
 // Mock auth middleware
-vi.mock('~/middleware/auth.js', () => ({
+vi.mock('../src/middleware/auth.ts', () => ({
   verifyWalletSignature: vi.fn((request, reply, done) => { done(); }), // Mock to simply call done
   verifyWalletSignatureFromHeaders: vi.fn((request, reply, done) => { done(); }), // Mock to simply call done
 }));
@@ -38,8 +38,9 @@ describe('API Keys Route', () => {
     vi.clearAllMocks();
 
     // Ensure verifyWalletSignatureFromHeaders is mocked to pass
-    (vi.mocked(await import('~/middleware/auth.js'))).verifyWalletSignatureFromHeaders.mockImplementation(async (request, reply) => {
-      // Simulate successful verification by doing nothing
+    (vi.mocked(await import('../src/middleware/auth.ts'))).verifyWalletSignatureFromHeaders.mockImplementation(async (request, reply) => {
+      // Simulate successful verification by doing nothing and resolving the promise
+      return Promise.resolve();
     });
   });
 
@@ -122,7 +123,7 @@ describe('API Keys Route', () => {
 
     it('should return 400 for missing headers', async () => {
       // Temporarily restore original implementation to test missing headers
-      (vi.mocked(await import('../../src/middleware/auth.js'))).verifyWalletSignatureFromHeaders.mockRestore();
+      (vi.mocked(await import('../src/middleware/auth.ts'))).verifyWalletSignatureFromHeaders.mockRestore();
 
       const response = await app.inject({
         method: 'GET',

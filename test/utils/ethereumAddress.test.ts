@@ -3,13 +3,13 @@
 import { describe, it, expect } from "vitest";
 
 // Import address validation utilities
-import { validateAddressFormat } from "../../src/utils/validation";
+import { isValidEthereumAddressFormat } from "../../src/utils/validation";
 import { isValidEthereumAddress } from "../../src/utils/verifySignature";
 
 // Test suite for Ethereum address validation utilities
 describe("Ethereum Address Validation", () => {
   // Tests for the validateAddressFormat function (simple regex check)
-  describe("validateAddressFormat", () => {
+  describe("isValidEthereumAddressFormat", () => {
   // Should validate correct Ethereum address formats (regex only)
   it("should return true for valid Ethereum address format (regex only)", () => {
       const validAddresses = [
@@ -21,7 +21,7 @@ describe("Ethereum Address Validation", () => {
       ];
 
       validAddresses.forEach((address) => {
-        expect(validateAddressFormat(address)).toBe(true);
+        expect(isValidEthereumAddressFormat(address)).toBe(true);
       });
     });
 
@@ -44,7 +44,7 @@ describe("Ethereum Address Validation", () => {
 
       invalidAddresses.forEach((address) => {
         // @ts-ignore - Testing invalid types
-        expect(validateAddressFormat(address)).toBe(false);
+        expect(isValidEthereumAddressFormat(address)).toBe(false);
       });
     });
   });
@@ -122,12 +122,12 @@ describe("Ethereum Address Validation", () => {
   it("should compare simple regex and ethers.js validation for Ethereum addresses", () => {
       // Both functions should accept valid addresses
       const validAddress = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266";
-      expect(validateAddressFormat(validAddress)).toBe(true);
+      expect(isValidEthereumAddressFormat(validAddress)).toBe(true);
       expect(isValidEthereumAddress(validAddress)).toBe(true);
 
       // Both functions should reject clearly invalid addresses
       const invalidAddress = "0x123";
-      expect(validateAddressFormat(invalidAddress)).toBe(false);
+      expect(isValidEthereumAddressFormat(invalidAddress)).toBe(false);
       expect(isValidEthereumAddress(invalidAddress)).toBe(false);
 
       // The regex validation doesn't check for checksum validity
@@ -135,9 +135,8 @@ describe("Ethereum Address Validation", () => {
       const invalidChecksumAddress =
         "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266".replace("f", "F");
       // This would pass the simple regex check
-      expect(validateAddressFormat(invalidChecksumAddress)).toBe(true);
+      expect(isValidEthereumAddressFormat(invalidChecksumAddress)).toBe(true);
       // But ethers.isAddress would reject it if it had an invalid checksum
-      // Note: This test might pass with ethers if the random change happens to create a valid checksum
       // In a real implementation, we should use isValidEthereumAddress for complete validation
     });
   });

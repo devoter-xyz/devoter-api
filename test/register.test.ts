@@ -1,11 +1,21 @@
 import { test, beforeAll, afterAll, expect } from 'vitest';
-import { build } from '../src/index.js';
+import { build } from '../src/server.js';
 import { prisma } from '../src/lib/prisma.js';
-import { generateWallet } from 'ethereum-waffle';
-import { signMessage } from '../src/utils/verifySignature.js';
+import { Wallet, ethers } from 'ethers';
+
+// Helper to generate a random wallet
+const generateWallet = () => {
+  return Wallet.createRandom();
+};
+
+// Helper to sign a message
+const signMessage = async (privateKey: string, message: string) => {
+  const wallet = new Wallet(privateKey);
+  return await wallet.signMessage(message);
+};
 
 let app;
-let wallet;
+let wallet: Wallet;
 let message;
 let signature;
 

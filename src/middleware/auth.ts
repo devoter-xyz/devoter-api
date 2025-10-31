@@ -105,6 +105,22 @@ export async function verifyWalletSignatureFromHeaders(
   // If all validation passes, continue
 }
 
+// Middleware to determine authentication strategy
+export async function authMiddleware(
+  request: FastifyRequest,
+  reply: FastifyReply
+) {
+  if (request.headers.authorization) {
+    await verifyApiKey(request, reply);
+  } else if (request.headers['x-wallet-address'] && request.headers['x-message'] && request.headers['x-signature']) {
+    await verifyWalletSignatureFromHeaders(request, reply);
+  } else {
+    // If no auth headers are present, allow the request to proceed to route handlers
+    // Route handlers can then implement their own specific auth requirements
+    return;
+  }
+}
+
 // Extend FastifyRequest to include a user property for authenticated API key users
 declare module 'fastify' {
   interface FastifyRequest {
@@ -146,16 +162,30 @@ export async function verifyApiKey(
     );
   }
 
-  // 3. Validate API key format using helper function
-  if (!isValidApiKeyFormat(token)) {
+  // Normalize the token: replace underscore delimiters with dot delimiters for backward compatibility
+  let normalizedToken = token;
+  if (token.includes('_')) {
+    // Only replace the first two underscores (delimiters between prefix, timestamp, and random part)
+    // The random part may contain underscores as it uses base64url encoding
+    const parts = token.split('_');
+    if (parts.length >= 3) {
+      normalizedToken = `${parts[0]}.${parts[1]}.${parts.slice(2).join('_')}`;
+    } else {
+      normalizedToken = token.replace(/_/g, '.');
+    }
+    request.log.warn('Legacy API key format detected and normalized during authentication.');
+  }
+
+  // 3. Validate API key format using helper function (now with the normalized token)
+  if (!isValidApiKeyFormat(normalizedToken)) {
     throw ApiError.unauthorized(
       "Invalid API key format",
       "INVALID_API_KEY_FORMAT"
     );
   }
 
-  // 4. Hash the incoming token for database lookup
-  const hashedToken = hashApiKey(token);
+  // 4. Hash the incoming token (now normalized) for database lookup
+  const hashedToken = hashApiKey(normalizedToken);
 
   // 5. Look up the API key in the database
   const apiKeyRecord = await prisma.apiKey.findFirst({

@@ -17,9 +17,9 @@ export default async function pollsRoute(fastify: FastifyInstance) {
         title: Type.String({ minLength: 1, maxLength: 200 }),
         description: Type.Optional(Type.String({ maxLength: 1000 })),
         options: Type.Array(Type.String(), { minItems: 2, maxItems: 10 }),
-        walletAddress: Type.RegExp(/^0x[a-fA-F0-9]{40}$/),
+        walletAddress: Type.String({ pattern: '^0x[a-fA-F0-9]{40}$' }),
         message: Type.String({ minLength: 1, maxLength: 1000 }),
-        signature: Type.RegExp(/^0x[a-fA-F0-9]{130}$/),
+        signature: Type.String({ pattern: '^0x[a-fA-F0-9]{130}$' }),
       }),
       response: {
         201: Type.Object({
@@ -154,3 +154,89 @@ export default async function pollsRoute(fastify: FastifyInstance) {
     config: {
       rateLimit: rateLimitConfigs.registration,
     },
+    preHandler: [verifyWalletSignature],
+  }, asyncHandler(async (request, reply) => {
+    const { id: pollId } = request.params as { id: string };
+    const { optionIndex, walletAddress } = request.body as { optionIndex: number; walletAddress: string };
+
+    // 1. Find the poll
+    const poll = await prisma.poll.findUnique({
+      where: { id: pollId },
+    });
+
+    if (!poll) {
+      throw new ApiError(HttpStatusCode.NOT_FOUND, "Poll not found");
+    }
+
+    // 2. Validate optionIndex
+    const options = JSON.parse(poll.options as string);
+    if (optionIndex < 0 || optionIndex >= options.length) {
+      throw new ApiError(HttpStatusCode.BAD_REQUEST, "Invalid option index");
+    }
+
+    // 3. Find the user
+    const user = await prisma.apiUser.findUnique({
+      where: { walletAddress },
+    });
+
+    if (!user) {
+      throw new ApiError(HttpStatusCode.NOT_FOUND, "User not found");
+    }
+
+    // 4. Check if user has already voted on this poll
+    const existingVote = await prisma.vote.findFirst({
+      where: {
+        pollId: poll.id,
+        voterId: user.id,
+      },
+    });
+
+    if (existingVote) {
+      throw new ApiError(HttpStatusCode.BAD_REQUEST, "User has already voted on this poll");
+    }
+
+    // In src/routes/polls.ts around lines 198 to 218, the transaction uses a stale
+    // poll snapshot and may create sparse arrays; re-read the poll votes inside the
+    // transaction (e.g., tx.poll.findUnique/ findFirst) to get the current votes,
+    // parse them, normalize the array to the poll's options length by filling missing
+    // indexes with 0 (so no sparse/null entries), increment the chosen optionIndex,
+    // then create the vote and update the poll.votes with the JSON-stringified
+    // normalized array — all using the same tx to avoid lost updates under
+    // concurrency.
+    await prisma.$transaction(async (tx) => {
+      // Re-check duplicate vote inside transaction
+      const existingVoteInsideTx = await tx.vote.findFirst({ where: { pollId: poll.id, voterId: user.id } });
+      if (existingVoteInsideTx) {
+        throw new ApiError(HttpStatusCode.BAD_REQUEST, "User has already voted on this poll");
+      }
+
+      // Read latest votes (and options if you prefer) inside the transaction
+      const pollForUpdate = await tx.poll.findUnique({
+        where: { id: poll.id },
+        select: { votes: true, options: true },
+      });
+
+      const parsedOptions = JSON.parse(pollForUpdate?.options ?? (poll.options as string));
+      const currentVotes = JSON.parse(pollForUpdate?.votes ?? '[]');
+
+      // Normalize votes array to options length without sparse entries
+      const normalizedVotes = Array.from({ length: parsedOptions.length }, (_, i) => Number(currentVotes[i] ?? 0));
+      normalizedVotes[optionIndex] = (normalizedVotes[optionIndex] || 0) + 1;
+
+      // Create vote and update poll within same tx
+      await tx.vote.create({
+        data: { pollId: poll.id, voterId: user.id, optionIndex },
+      });
+
+      await tx.poll.update({
+        where: { id: poll.id },
+        data: { votes: JSON.stringify(normalizedVotes) },
+      });
+    });
+
+    reply.code(201).send({
+      success: true,
+      message: "Vote recorded successfully",
+    });
+  }));
+}

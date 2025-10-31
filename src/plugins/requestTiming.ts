@@ -14,6 +14,10 @@ const requestTimingPlugin: FastifyPluginAsync = async (fastify) => {
     const start = request.hrtime as bigint;
     const end = process.hrtime.bigint();
     const duration = Number(end - start) / 1_000_000; // Convert nanoseconds to milliseconds
+    const debugTiming = process.env.REQUEST_TIMING_DEBUG === 'true';
+    if (debugTiming) {
+      fastify.log.debug({ route: request.url, method: request.method, durationMs: duration.toFixed(2) }, 'request duration');
+    }
 
     reply.header('X-Response-Time', `${duration.toFixed(2)}ms`);
 

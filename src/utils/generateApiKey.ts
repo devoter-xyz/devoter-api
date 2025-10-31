@@ -32,7 +32,7 @@ export function generateApiKey(length: number = 32, seed?: string): string {
 export function generateUniqueApiKey(userId: string, prefix: string = 'dv'): string {
   const randomPart = generateApiKey(24); // 24 bytes = 32 chars in base64url
   const timestamp = Date.now().toString(36); // Compact timestamp
-  return `${prefix}_${timestamp}_${randomPart}`;
+  return `${prefix}.${timestamp}.${randomPart}`;
 }
 
 /**
@@ -64,16 +64,29 @@ export function maskApiKey(apiKey: string, visibleChars: number = 8): string {
  * @param apiKey - The API key to validate
  * @returns True if the API key has a valid format
  */
-export function isValidApiKeyFormat(apiKey: string): boolean {
-  // Check if it matches our generated format: prefix_timestamp_randompart
-  const apiKeyPattern = /^[a-zA-Z]{2,}_[0-9a-z]+_[A-Za-z0-9_-]{32,}$/;
+export function isValidApiKeyFormat(apiKey: string, strictDotDelimiter: boolean = false): boolean {
+  let normalizedKey = apiKey;
+  if (!strictDotDelimiter && apiKey.includes('_')) {
+    // Only replace the first two underscores (delimiters between prefix, timestamp, and random part)
+    // The random part may contain underscores as it uses base64url encoding
+    const parts = apiKey.split('_');
+    if (parts.length >= 3) {
+      normalizedKey = `${parts[0]}.${parts[1]}.${parts.slice(2).join('_')}`;
+    } else {
+      normalizedKey = apiKey.replace(/_/g, '.');
+    }
+    console.log('Legacy API key format detected and normalized.');
+  }
+
+  // Check if it matches our generated format: prefix.timestamp.randompart (now always with dots)
+  const apiKeyPattern = /^[a-zA-Z]{2,}\.[0-9a-z]+\.[A-Za-z0-9_-]{32,}$/;
   
-  if (!apiKeyPattern.test(apiKey)) {
+  if (!apiKeyPattern.test(normalizedKey)) {
     return false;
   }
   
   // Extract and validate the timestamp part
-  const parts = apiKey.split('_');
+  const parts = normalizedKey.split('.');
   
   // Ensure the timestamp part exists
   if (parts.length < 2 || !parts[1]) {

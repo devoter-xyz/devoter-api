@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { validateWalletAuthInput, validateSignatureFormat, validateAddressFormat, validateCommentInput } from '../../src/utils/validation';
+import { validateWalletAuthInput, isValidEthereumSignatureFormat, isValidEthereumAddressFormat, validateCommentInput } from '../../src/utils/validation';
 
 describe('Input Validation', () => {
   describe('validateWalletAuthInput', () => {
@@ -39,29 +39,49 @@ describe('Input Validation', () => {
 
   it('should reject input where walletAddress, message, or signature are not strings', () => {
       const invalidTypeInputs = [
-        { walletAddress: 123, message: 'test', signature: '0x' + '1'.repeat(130) },
-        { walletAddress: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266', message: 42, signature: '0x' + '1'.repeat(130) },
-        { walletAddress: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266', message: 'test', signature: true }
+        { input: { walletAddress: 123, message: 'test', signature: '0x' + '1'.repeat(130) }, expectedError: 'walletAddress must be a non-empty string' },
+        { input: { walletAddress: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266', message: 42, signature: '0x' + '1'.repeat(130) }, expectedError: 'message must be a string between 1 and 1000 characters' },
+        { input: { walletAddress: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266', message: 'test', signature: true }, expectedError: 'signature must be a non-empty string' }
       ];
       
-      invalidTypeInputs.forEach(input => {
+      invalidTypeInputs.forEach(({ input, expectedError }) => {
         const result = validateWalletAuthInput(input);
         expect(result.isValid).toBe(false);
-        expect(result.error).toBe('walletAddress, message, and signature must be strings');
+        expect(result.error).toBe(expectedError);
       });
     });
 
-  it('should reject input with invalid wallet address format', () => {
+  it('should reject input with empty or non-string wallet address', () => {
       const invalidAddresses = [
-        '123', // Too short
-        'not-an-address', // Not hex
-        '0xgggggggggggggggggggggggggggggggggggggggg', // Invalid hex
         '', // Empty string
-        '0x', // Just prefix
-        '0x1234' // Too short hex
+        '   ', // Whitespace only
+        null, // Null
+        undefined, // Undefined
+        123, // Not a string
       ];
       
       invalidAddresses.forEach(address => {
+        const input = {
+          walletAddress: address as any,
+          message: 'test',
+          signature: '0x' + '1'.repeat(130)
+        };
+        const result = validateWalletAuthInput(input);
+        expect(result.isValid).toBe(false);
+        expect(result.error).toBe('walletAddress must be a non-empty string');
+      });
+    });
+
+  it('should reject input with incorrectly formatted wallet address (but non-empty string)', () => {
+      const invalidFormatAddresses = [
+        '0x123', // Too short
+        'not-an-address', // Not hex
+        '0xgggggggggggggggggggggggggggggggggggggggg', // Invalid hex
+        '0x1234', // Too short hex
+        '0x123456789012345678901234567890123456789G', // Invalid hex character
+      ];
+      
+      invalidFormatAddresses.forEach(address => {
         const input = {
           walletAddress: address,
           message: 'test',
@@ -73,18 +93,38 @@ describe('Input Validation', () => {
       });
     });
 
-  it('should reject input with invalid signature format', () => {
+  it('should reject input with empty or non-string signature', () => {
       const invalidSignatures = [
-        '0x123', // Too short
-        'not-a-signature', // Not hex
-        '0xgggg', // Invalid hex
         '', // Empty string
-        '0x', // Just prefix
-        '0x' + '1'.repeat(129), // Too short hex
-        '0x' + '1'.repeat(131) // Too long hex
+        '   ', // Whitespace only
+        null, // Null
+        undefined, // Undefined
+        123, // Not a string
       ];
       
       invalidSignatures.forEach(signature => {
+        const input = {
+          walletAddress: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+          message: 'test',
+          signature: signature as any
+        };
+        const result = validateWalletAuthInput(input);
+        expect(result.isValid).toBe(false);
+        expect(result.error).toBe('signature must be a non-empty string');
+      });
+    });
+
+  it('should reject input with incorrectly formatted signature (but non-empty string)', () => {
+      const invalidFormatSignatures = [
+        '0x123', // Too short
+        'not-a-signature', // Not hex
+        '0xgggg', // Invalid hex
+        '0x' + '1'.repeat(129), // Too short hex
+        '0x' + '1'.repeat(131), // Too long hex
+        '0x' + '1'.repeat(129) + 'G', // Invalid hex character
+      ];
+      
+      invalidFormatSignatures.forEach(signature => {
         const input = {
           walletAddress: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
           message: 'test',
@@ -104,7 +144,7 @@ describe('Input Validation', () => {
       };
       const result = validateWalletAuthInput(input);
       expect(result.isValid).toBe(false);
-      expect(result.error).toBe('Message cannot be empty');
+      expect(result.error).toBe('message must be a string between 1 and 1000 characters');
 
       // Also test whitespace-only message
       const whitespaceInput = {
@@ -113,7 +153,7 @@ describe('Input Validation', () => {
       };
       const whitespaceResult = validateWalletAuthInput(whitespaceInput);
       expect(whitespaceResult.isValid).toBe(false);
-      expect(whitespaceResult.error).toBe('Message cannot be empty');
+      expect(whitespaceResult.error).toBe('message must be a string between 1 and 1000 characters');
     });
 
   it('should reject input with message exceeding 1000 characters', () => {
@@ -124,7 +164,7 @@ describe('Input Validation', () => {
       };
       const result = validateWalletAuthInput(input);
       expect(result.isValid).toBe(false);
-      expect(result.error).toBe('Message too long (max 1000 characters)');
+      expect(result.error).toBe('message must be a string between 1 and 1000 characters');
     });
     
   it('should allow input with extra unexpected fields (ignored)', () => {
@@ -148,7 +188,7 @@ describe('Input Validation', () => {
       };
       const result = validateWalletAuthInput(input);
       expect(result.isValid).toBe(false);
-      expect(result.error).toBe('walletAddress, message, and signature must be strings');
+      expect(result.error).toBe('walletAddress must be a non-empty string');
     });
 
   it('should reject input where fields are nested objects', () => {
@@ -159,7 +199,7 @@ describe('Input Validation', () => {
       };
       const result = validateWalletAuthInput(input);
       expect(result.isValid).toBe(false);
-      expect(result.error).toBe('walletAddress, message, and signature must be strings');
+      expect(result.error).toBe('walletAddress must be a non-empty string');
     });
 
   it('should reject input where fields are arrays', () => {
@@ -170,7 +210,7 @@ describe('Input Validation', () => {
       };
       const result = validateWalletAuthInput(input);
       expect(result.isValid).toBe(false);
-      expect(result.error).toBe('walletAddress, message, and signature must be strings');
+      expect(result.error).toBe('walletAddress must be a non-empty string');
     });
 
   it('should allow deeply nested input object as long as required fields are valid', () => {
@@ -286,10 +326,10 @@ describe('Input Validation', () => {
     });
   });
 
-  describe('validateSignatureFormat', () => {
+  describe('isValidEthereumSignatureFormat', () => {
   it('should return true for valid Ethereum signature format', () => {
       const validSignature = '0x' + '1'.repeat(130);
-      expect(validateSignatureFormat(validSignature)).toBe(true);
+      expect(isValidEthereumSignatureFormat(validSignature)).toBe(true);
     });
 
   it('should return false for invalid Ethereum signature formats', () => {
@@ -304,12 +344,12 @@ describe('Input Validation', () => {
       ];
       
       invalidSignatures.forEach(signature => {
-        expect(validateSignatureFormat(signature)).toBe(false);
+        expect(isValidEthereumSignatureFormat(signature)).toBe(false);
       });
     });
   });
 
-  describe('validateAddressFormat', () => {
+  describe('isValidEthereumAddressFormat', () => {
   it('should return true for valid Ethereum address format', () => {
       const validAddresses = [
         '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266', // Mixed case
@@ -318,7 +358,7 @@ describe('Input Validation', () => {
       ];
       
       validAddresses.forEach(address => {
-        expect(validateAddressFormat(address)).toBe(true);
+        expect(isValidEthereumAddressFormat(address)).toBe(true);
       });
     });
 
@@ -333,7 +373,7 @@ describe('Input Validation', () => {
       ];
       
       invalidAddresses.forEach(address => {
-        expect(validateAddressFormat(address)).toBe(false);
+        expect(isValidEthereumAddressFormat(address)).toBe(false);
       });
     });
   });

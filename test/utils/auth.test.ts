@@ -60,25 +60,24 @@ test('should return unauthorized JSON response for invalid wallet signature', as
     send: vi.fn(),
   } as unknown as FastifyReply;
 
-  await expect(verifyWalletSignature(request, reply)).rejects.toBeInstanceOf(ApiError);
+  await verifyWalletSignature(request, reply); // Call the preHandler
+
+  expect(handleError).toHaveBeenCalledOnce();
   expect(capturedError).toBeInstanceOf(ApiError);
   expect(capturedRequest).toBe(request);
   expect(capturedReply).toBe(reply);
-
-  // Assert that handleError was called
-  expect(handleError).toHaveBeenCalledOnce();
 
   // Assert the status code and JSON body
   expect(reply.status).toHaveBeenCalledWith(HttpStatusCode.UNAUTHORIZED);
   expect(reply.send).toHaveBeenCalledWith(
     expect.objectContaining({
-      status: HttpStatusCode.UNAUTHORIZED,
+      statusCode: HttpStatusCode.UNAUTHORIZED,
       message: 'Invalid or expired wallet signature',
       code: 'INVALID_SIGNATURE',
       details: { reason: 'Invalid signature' },
     })
   );
-});
+}); // Added missing closing brace
 
 test('should return bad request JSON response for missing request body', async () => {
   const request = {
