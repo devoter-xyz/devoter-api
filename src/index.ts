@@ -2,7 +2,6 @@
 import fastify from "fastify";
 import { config } from "dotenv";
 import { build } from "./server.js";
-import fetch from "node-fetch";
 
 // Load environment variables from .env file into process.env
 config();
