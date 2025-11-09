@@ -31,7 +31,7 @@ if (process.env.NODE_ENV !== "test") {
 
       // Perform a simple health check
       try {
-        const resolvedHealthCheckHost = host === '0.0.0.0' ? '127.0.0.1' : host;
+        const resolvedHealthCheckHost = host === '0.0.0.0' ? '127.0.0.1' : (host === '::' ? '::1' : host);
         const healthCheckUrl = resolvedHealthCheckHost.includes(':')
           ? `http://[${resolvedHealthCheckHost}]:${port}/health`
           : `http://${resolvedHealthCheckHost}:${port}/health`;

@@ -62,6 +62,8 @@ test('should register a new user with wallet authentication', async () => {
   const response = await app.inject({
     method: 'POST',
     url: '/api/v1/register',
+    payload: {
+      walletAddress: newWallet.address,
       message: newMessage,
       signature: newSignature,
     },
