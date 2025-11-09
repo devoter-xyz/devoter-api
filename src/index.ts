@@ -31,14 +31,28 @@ if (process.env.NODE_ENV !== "test") {
 
       // Perform a simple health check
       try {
-        const healthCheckResponse = await fetch(`http://${host}:${port}/health`);
+        const resolvedHealthCheckHost = host === '0.0.0.0' ? '127.0.0.1' : host;
+        const healthCheckUrl = resolvedHealthCheckHost.includes(':')
+          ? `http://[${resolvedHealthCheckHost}]:${port}/health`
+          : `http://${resolvedHealthCheckHost}:${port}/health`;
+
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 5000); // 5 seconds timeout
+
+        const healthCheckResponse = await fetch(healthCheckUrl, { signal: controller.signal });
+        clearTimeout(timeout);
+
         if (!healthCheckResponse.ok) {
           server.log.error(`Health check failed with status: ${healthCheckResponse.status}`);
           process.exit(1);
         }
         server.log.info("✅ Server health check passed.");
-      } catch (healthCheckError) {
-        server.log.error({ err: healthCheckError }, "Server health check failed.");
+      } catch (healthCheckError: any) {
+        if (healthCheckError.name === 'AbortError') {
+          server.log.error("Server health check timed out.");
+        } else {
+          server.log.error({ err: healthCheckError }, "Server health check failed.");
+        }
         process.exit(1);
       }
 

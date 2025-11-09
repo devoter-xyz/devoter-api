@@ -36,7 +36,7 @@ afterAll(async () => {
 test('should reject registration with email or password', async () => {
   const response = await app.inject({
     method: 'POST',
-    url: '/register',
+    url: '/api/v1/register',
     payload: {
       walletAddress: wallet.address,
       message: message,
@@ -61,9 +61,7 @@ test('should register a new user with wallet authentication', async () => {
 
   const response = await app.inject({
     method: 'POST',
-    url: '/register',
-    payload: {
-      walletAddress: newWallet.address,
+    url: '/api/v1/register',
       message: newMessage,
       signature: newSignature,
     },
