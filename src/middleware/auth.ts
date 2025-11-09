@@ -191,7 +191,7 @@ export async function verifyApiKey(
   const apiKeyRecord = await prisma.apiKey.findFirst({
     where: {
       key: hashedToken,
-      status: "ACTIVE", // Ensure the API key is active
+      enabled: true, // Ensure the API key is active
     },
     include: {
       apiUser: true, // Include the associated user
@@ -208,7 +208,7 @@ export async function verifyApiKey(
 
   // 7. Attach user and API key information to the request for subsequent handlers
   request.user = {
-    apiUserId: apiKeyRecord.apiUserId,
+    apiUserId: apiKeyRecord.userId,
     apiKeyId: apiKeyRecord.id,
   };
 

@@ -14,8 +14,8 @@ export interface ValidationResult {
 }
 
 export interface CommentInput {
-  user?: string;
-  comment?: string;
+  user: string;
+  comment: string;
 }
 
 /**

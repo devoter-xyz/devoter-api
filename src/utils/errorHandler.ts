@@ -1,4 +1,4 @@
-import type { FastifyRequest, FastifyReply } from "fastify";
+import type { FastifyRequest, FastifyReply, RouteGenericInterface } from "fastify";
 
 export enum HttpStatusCode {
   // Success codes
@@ -73,7 +73,7 @@ export class ApiError extends Error {
     message: string,
     code: string = "NOT_FOUND",
     details?: Record<string, any>
-  ): ApiError {
+): ApiError {
     return new ApiError(HttpStatusCode.NOT_FOUND, message, code, details);
   }
 
@@ -204,10 +204,10 @@ export function handleError(
 /**
  * Helper function to safely execute async route handlers with error handling
  */
-export function asyncHandler(
-  handler: (request: FastifyRequest, reply: FastifyReply) => Promise<any>
+export function asyncHandler<RouteGeneric extends RouteGenericInterface = RouteGenericInterface>(
+  handler: (request: FastifyRequest<RouteGeneric>, reply: FastifyReply) => Promise<any>
 ) {
-  return async (request: FastifyRequest, reply: FastifyReply) => {
+  return async (request: FastifyRequest<RouteGeneric>, reply: FastifyReply) => {
     try {
       await handler(request, reply);
     } catch (error) {
