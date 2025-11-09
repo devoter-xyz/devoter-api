@@ -29,6 +29,16 @@ if (process.env.NODE_ENV !== "test") {
       await server.listen({ port, host });
       server.log.info(`🚀 Server listening at http://${host}:${port} in ${process.env.NODE_ENV} mode`);
 
+      const signals = ["SIGINT", "SIGTERM"];
+      signals.forEach((signal) => {
+        process.on(signal, async () => {
+          server.log.info(`Received ${signal}. Shutting down server...`);
+          await server.close();
+          server.log.info("Server shut down gracefully.");
+          process.exit(0);
+        });
+      });
+
       // Perform a simple health check
       try {
         const resolvedHealthCheckHost = host === '0.0.0.0' ? '127.0.0.1' : (host === '::' ? '::1' : host);
