@@ -24,14 +24,12 @@ const commentsRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) => {
 
   // Post a new comment to a poll
 
-  fastify.post('/poll/:pollId', async (request: FastifyRequest<{ Params: { pollId: string }; Body: { user?: string; comment?: string } }>, reply: FastifyReply) => {
+  fastify.post('/poll/:pollId', async (request: FastifyRequest<{ Params: { pollId: string }; Body: { user: string; comment: string } }>, reply: FastifyReply) => {
     const { pollId } = request.params;
-    const { user, comment } = request.body || {};
+    const { user, comment } = request.body;
 
-    const rawUser = user || '';
-    const rawComment = comment || '';
-    const trimmedUser = typeof rawUser === 'string' ? rawUser.trim() : '';
-    const trimmedComment = typeof rawComment === 'string' ? rawComment.trim() : '';
+    const trimmedUser = user.trim();
+    const trimmedComment = comment.trim();
 
     const validation = validateCommentInput({ user: trimmedUser, comment: trimmedComment });
     if (!validation.isValid) {

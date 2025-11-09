@@ -61,7 +61,7 @@ export default async function apiKeysRoute(fastify: FastifyInstance) {
         include: {
           apiKeys: {
             where: {
-              status: "ACTIVE",
+              enabled: true,
             },
           },
         },
@@ -90,9 +90,10 @@ export default async function apiKeysRoute(fastify: FastifyInstance) {
       // Store the API key in database
       const createdApiKey = await prisma.apiKey.create({
         data: {
-          apiUserId: user.id,
+          userId: user.id,
           key: hashedKey, // Store hashed version
-          status: "ACTIVE",
+          hash: hashedKey, // Also store in hash field as per schema
+          enabled: true,
         },
       });
 
@@ -125,7 +126,7 @@ export default async function apiKeysRoute(fastify: FastifyInstance) {
               key: Type.String(),
               createdAt: Type.String(),
               totalUsed: Type.Optional(Type.Number()),
-              status: Type.String(),
+              enabled: Type.Boolean(),
             })
           ),
         }),
@@ -172,7 +173,7 @@ export default async function apiKeysRoute(fastify: FastifyInstance) {
         key: string;
         createdAt: string;
         totalUsed?: number;
-        status: string;
+        enabled: boolean;
       }
 
       const apiKeys: ApiKeyResponse[] = user.apiKeys.map((key: {
@@ -180,13 +181,13 @@ export default async function apiKeysRoute(fastify: FastifyInstance) {
         key: string;
         createdAt: Date;
         totalUsed?: number;
-        status: string;
+        enabled: boolean;
       }): ApiKeyResponse => {
         const apiKeyObj: ApiKeyResponse = {
           id: key.id,
           key: maskApiKey(key.key),
           createdAt: key.createdAt.toISOString(),
-          status: key.status,
+          enabled: key.enabled,
         };
         if (key.totalUsed !== undefined) {
           apiKeyObj.totalUsed = key.totalUsed;
@@ -219,7 +220,6 @@ export default async function apiKeysRoute(fastify: FastifyInstance) {
             Type.Object({
               id: Type.String(),
               createdAt: Type.String(),
-              scopes: Type.Optional(Type.Array(Type.String())),
             })
           ),
         }),
@@ -251,7 +251,6 @@ export default async function apiKeysRoute(fastify: FastifyInstance) {
             select: {
               id: true,
               createdAt: true,
-              scopes: true, // Assuming 'scopes' field exists in your Prisma model
             },
             orderBy: {
               createdAt: "desc",
@@ -267,7 +266,6 @@ export default async function apiKeysRoute(fastify: FastifyInstance) {
       const apiKeysMetadata = user.apiKeys.map((key) => ({
         id: key.id,
         createdAt: key.createdAt.toISOString(),
-        scopes: key.scopes || [], // Provide an empty array if scopes is null/undefined
       }));
 
       return reply.status(HttpStatusCode.OK).send({

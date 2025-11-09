@@ -1,4 +1,4 @@
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, FastifyRequest, RouteGenericInterface } from "fastify";
 import { verifyWalletSignature } from "../middleware/auth.js";
 import { rateLimitConfigs } from "../middleware/rateLimit.js";
 import * as Type from "@sinclair/typebox";
@@ -22,9 +22,13 @@ type RegisterRequestBody = {
   signature: string;
 };
 
+interface RegisterRoute extends RouteGenericInterface {
+  Body: RegisterRequestBody;
+}
+
 export default async function registerRoute(fastify: FastifyInstance) {
   // POST /register - Register a new user with wallet authentication
-  fastify.post("/register", {
+  fastify.post<RegisterRoute>("/register", {
     schema: {
       body: Type.Object({
         walletAddress: Type.RegExp(/^0x[a-fA-F0-9]{40}$/, {
@@ -85,7 +89,7 @@ export default async function registerRoute(fastify: FastifyInstance) {
         });
       }
 
-      const { walletAddress } = request.body as RegisterRequestBody;
+      const { walletAddress } = request.body;
       // Normalize input: trim and lowercase the wallet address
       const normalizedWalletAddress = walletAddress.trim().toLowerCase();
 
