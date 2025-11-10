@@ -69,23 +69,25 @@ export function validateCommentInput(input: CommentInput): ValidationResult {
 }
 
 /**
- * Validates the structure and format of wallet authentication input.
- * @param input - The wallet authentication input object containing 'walletAddress', 'message', and 'signature' fields.
+ * Internal helper to validate the common structure and format of wallet-related payloads.
+ * @param payload - The input object containing 'walletAddress', 'message', and 'signature' fields.
  * @returns A ValidationResult object indicating if the input is valid and an error message if not.
  */
-export function validateWalletAuthInput(input: any): ValidationResult {
-  if (!input || typeof input !== "object" || Array.isArray(input)) {
+function _validateWalletPayload(payload: any): ValidationResult {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
     return { isValid: false, error: "Request body must be a valid JSON object" };
   }
 
-  const { walletAddress, message, signature } = input;
+  const { walletAddress, message, signature } = payload;
 
-  if (!Object.prototype.hasOwnProperty.call(input, "walletAddress") ||
-      !Object.prototype.hasOwnProperty.call(input, "message") ||
-      !Object.prototype.hasOwnProperty.call(input, "signature")) {
+  // Check for presence of all required fields
+  if (!Object.prototype.hasOwnProperty.call(payload, "walletAddress") ||
+      !Object.prototype.hasOwnProperty.call(payload, "message") ||
+      !Object.prototype.hasOwnProperty.call(payload, "signature")) {
     return { isValid: false, error: "Missing required fields: walletAddress, message, signature" };
   }
 
+  // Validate types and non-emptiness
   if (!isStringAndNotEmpty(walletAddress)) {
     return { isValid: false, error: "walletAddress must be a non-empty string" };
   }
@@ -96,15 +98,24 @@ export function validateWalletAuthInput(input: any): ValidationResult {
     return { isValid: false, error: "signature must be a non-empty string" };
   }
 
+  // Validate formats
   if (!isValidEthereumAddressFormat(walletAddress)) {
     return { isValid: false, error: "Invalid Ethereum wallet address format" };
   }
-
   if (!isValidEthereumSignatureFormat(signature)) {
     return { isValid: false, error: "Invalid signature format. Must be a valid Ethereum signature (0x + 130 hex chars)" };
   }
 
   return { isValid: true };
+}
+
+/**
+ * Validates the structure and format of wallet authentication input.
+ * @param input - The wallet authentication input object containing 'walletAddress', 'message', and 'signature' fields.
+ * @returns A ValidationResult object indicating if the input is valid and an error message if not.
+ */
+export function validateWalletAuthInput(input: any): ValidationResult {
+  return _validateWalletPayload(input);
 }
 
 /**
@@ -144,38 +155,6 @@ export function validateWalletAuthInput(input: any): ValidationResult {
  * console.log(result3); // { isValid: false, error: "Missing required fields: walletAddress, message, signature" }
  */
 export function validateRegisterPayload(payload: any): ValidationResult {
-  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
-    return { isValid: false, error: "Request body must be a valid JSON object" };
-  }
-
-  const { walletAddress, message, signature } = payload;
-
-  // Check for presence of all required fields
-  if (!Object.prototype.hasOwnProperty.call(payload, "walletAddress") ||
-      !Object.prototype.hasOwnProperty.call(payload, "message") ||
-      !Object.prototype.hasOwnProperty.call(payload, "signature")) {
-    return { isValid: false, error: "Missing required fields: walletAddress, message, signature" };
-  }
-
-  // Validate types and non-emptiness
-  if (!isStringAndNotEmpty(walletAddress)) {
-    return { isValid: false, error: "walletAddress must be a non-empty string" };
-  }
-  if (!isStringAndNotEmpty(message, 1, 1000)) {
-    return { isValid: false, error: "message must be a string between 1 and 1000 characters" };
-  }
-  if (!isStringAndNotEmpty(signature)) {
-    return { isValid: false, error: "signature must be a non-empty string" };
-  }
-
-  // Validate formats
-  if (!isValidEthereumAddressFormat(walletAddress)) {
-    return { isValid: false, error: "Invalid Ethereum wallet address format" };
-  }
-  if (!isValidEthereumSignatureFormat(signature)) {
-    return { isValid: false, error: "Invalid signature format. Must be a valid Ethereum signature (0x + 130 hex chars)" };
-  }
-
-  return { isValid: true };
+  return _validateWalletPayload(payload);
 }
 
