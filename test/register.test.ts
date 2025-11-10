@@ -105,8 +105,8 @@ test('should return 400 for invalid wallet address format', async () => {
   expect(response.statusCode).toBe(400);
   expect(response.json()).toEqual({
     statusCode: 400,
-    code: 'FST_ERR_VALIDATION',
-    message: 'body/walletAddress must match pattern "^0x[a-fA-F0-9]{40}$"'
+    code: 'INVALID_REGISTER_PAYLOAD',
+    message: 'Invalid Ethereum wallet address format'
   });
 });
 
@@ -124,8 +124,8 @@ test('should return 400 for missing message', async () => {
   expect(response.statusCode).toBe(400);
   expect(response.json()).toEqual({
     statusCode: 400,
-    code: 'FST_ERR_VALIDATION',
-    message: 'body must have required property \'message\''
+    code: 'INVALID_REGISTER_PAYLOAD',
+    message: 'Missing required fields: walletAddress, message, signature'
   });
 });
 
@@ -143,8 +143,8 @@ test('should return 400 for missing signature', async () => {
   expect(response.statusCode).toBe(400);
   expect(response.json()).toEqual({
     statusCode: 400,
-    code: 'FST_ERR_VALIDATION',
-    message: 'body must have required property \'signature\''
+    code: 'INVALID_REGISTER_PAYLOAD',
+    message: 'Missing required fields: walletAddress, message, signature'
   });
 });
 
@@ -163,8 +163,8 @@ test('should return 400 for invalid signature format', async () => {
   expect(response.statusCode).toBe(400);
   expect(response.json()).toEqual({
     statusCode: 400,
-    code: 'FST_ERR_VALIDATION',
-    message: 'body/signature must match pattern "^0x[a-fA-F0-9]{130}$"'
+    code: 'INVALID_REGISTER_PAYLOAD',
+    message: 'Invalid signature format. Must be a valid Ethereum signature (0x + 130 hex chars)'
   });
 });
 

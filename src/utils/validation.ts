@@ -106,3 +106,76 @@ export function validateWalletAuthInput(input: any): ValidationResult {
 
   return { isValid: true };
 }
+
+/**
+ * Validates the payload for the register endpoint.
+ * Ensures that walletAddress, message, and signature are present and correctly formatted.
+ *
+ * @param payload The request body received by the register endpoint.
+ * @returns A ValidationResult object indicating if the payload is valid and an error message if not.
+ *
+ * @example
+ * // Valid payload
+ * const validPayload = {
+ *   walletAddress: "0x1234567890123456789012345678901234567890",
+ *   message: "Sign this message to register",
+ *   signature: "0x" + "a".repeat(130),
+ * };
+ * const result1 = validateRegisterPayload(validPayload);
+ * console.log(result1); // { isValid: true }
+ *
+ * @example
+ * // Invalid walletAddress format
+ * const invalidWalletAddressPayload = {
+ *   walletAddress: "0x123",
+ *   message: "Sign this message to register",
+ *   signature: "0x" + "a".repeat(130),
+ * };
+ * const result2 = validateRegisterPayload(invalidWalletAddressPayload);
+ * console.log(result2); // { isValid: false, error: "Invalid Ethereum wallet address format" }
+ *
+ * @example
+ * // Missing message
+ * const missingMessagePayload = {
+ *   walletAddress: "0x1234567890123456789012345678901234567890",
+ *   signature: "0x" + "a".repeat(130),
+ * };
+ * const result3 = validateRegisterPayload(missingMessagePayload);
+ * console.log(result3); // { isValid: false, error: "Missing required fields: walletAddress, message, signature" }
+ */
+export function validateRegisterPayload(payload: any): ValidationResult {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    return { isValid: false, error: "Request body must be a valid JSON object" };
+  }
+
+  const { walletAddress, message, signature } = payload;
+
+  // Check for presence of all required fields
+  if (!Object.prototype.hasOwnProperty.call(payload, "walletAddress") ||
+      !Object.prototype.hasOwnProperty.call(payload, "message") ||
+      !Object.prototype.hasOwnProperty.call(payload, "signature")) {
+    return { isValid: false, error: "Missing required fields: walletAddress, message, signature" };
+  }
+
+  // Validate types and non-emptiness
+  if (!isStringAndNotEmpty(walletAddress)) {
+    return { isValid: false, error: "walletAddress must be a non-empty string" };
+  }
+  if (!isStringAndNotEmpty(message, 1, 1000)) {
+    return { isValid: false, error: "message must be a string between 1 and 1000 characters" };
+  }
+  if (!isStringAndNotEmpty(signature)) {
+    return { isValid: false, error: "signature must be a non-empty string" };
+  }
+
+  // Validate formats
+  if (!isValidEthereumAddressFormat(walletAddress)) {
+    return { isValid: false, error: "Invalid Ethereum wallet address format" };
+  }
+  if (!isValidEthereumSignatureFormat(signature)) {
+    return { isValid: false, error: "Invalid signature format. Must be a valid Ethereum signature (0x + 130 hex chars)" };
+  }
+
+  return { isValid: true };
+}
+

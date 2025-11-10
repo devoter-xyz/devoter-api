@@ -8,6 +8,7 @@ import {
   HttpStatusCode,
 } from "../utils/errorHandler.js";
 import { prisma } from "../lib/prisma.js";
+import { validateRegisterPayload } from "../utils/validation.js";
 
 // Define the expected request body type for clarity and reusability
 /**
@@ -81,6 +82,15 @@ export default async function registerRoute(fastify: FastifyInstance) {
     },
     preHandler: verifyWalletSignature,
     handler: asyncHandler(async (request, reply) => {
+      const validation = validateRegisterPayload(request.body);
+      if (!validation.isValid) {
+        return reply.code(400).send({
+          statusCode: 400,
+          message: validation.error,
+          code: 'INVALID_REGISTER_PAYLOAD',
+        });
+      }
+
       if ('email' in request.body || 'password' in request.body) {
         return reply.code(400).send({
           statusCode: 400,
