@@ -348,29 +348,34 @@ export default async function apiKeysRoute(fastify: FastifyInstance) {
         throw ApiError.notFound("API key not found or already revoked.", "API_KEY_NOT_FOUND");
       }
 
-      // Revoke the old key
-      await prisma.apiKey.update({
-        where: { id: existingApiKey.id },
-        data: {
-          enabled: false,
-          rotatedAt: new Date(),
-        },
-      });
-
-      // Generate a new API key
-      const { key: newApiKey, createdAt, algorithm } = generateUniqueApiKey(user.id);
+      // Generate a new API key and a single timestamp for both key and metadata
+      const createdAtTimestamp = Date.now();
+      const { key: newApiKey, createdAt, algorithm } = generateUniqueApiKey(user.id, 'dv', createdAtTimestamp);
       const hashedKey = hashApiKey(newApiKey);
 
-      // Store the new API key in database
-      const createdApiKey = await prisma.apiKey.create({
-        data: {
-          userId: user.id,
-          key: hashedKey,
-          hash: hashedKey,
-          enabled: true,
-          createdAt: new Date(createdAt), // Use the createdAt from generateUniqueApiKey
-          algorithm: algorithm,
-        },
+      // Perform revocation and creation in a single transaction
+      const [_, createdApiKey] = await prisma.$transaction(async (tx) => {
+        // Revoke the old key
+        const updatedKey = await tx.apiKey.update({
+          where: { id: existingApiKey.id },
+          data: {
+            enabled: false,
+            rotatedAt: new Date(createdAtTimestamp),
+          },
+        });
+
+        // Store the new API key in database
+        const newKey = await tx.apiKey.create({
+          data: {
+            userId: user.id,
+            key: hashedKey,
+            hash: hashedKey,
+            enabled: true,
+            createdAt: new Date(createdAt), // Use the createdAt from generateUniqueApiKey
+            algorithm: algorithm,
+          },
+        });
+        return [updatedKey, newKey];
       });
 
       return reply.status(HttpStatusCode.OK).send({

@@ -19,27 +19,24 @@ export function generateApiKey(
   length: number = 32,
   format: ApiKeyFormat = 'base64url',
   seed?: string
-): ApiKeyData {
+): { key: string; algorithm: ApiKeyFormat } { // Changed return type
   let buffer: Buffer;
   if (seed) {
     // Use a seeded hash for deterministic output in testing
-    buffer = crypto.createHash('sha256').update(seed).digest().slice(0, length);
-    // If the seed hash is shorter than length, repeat it or pad with zeros.
-    // For simplicity and common test cases, slicing is usually sufficient.
-    // If length is greater than 32 (SHA256 output), it will be padded with zeros.
-    if (buffer.length < length) {
-      buffer = Buffer.concat([buffer, Buffer.alloc(length - buffer.length, 0)]);
+    // Ensure the seed is used to generate a consistent buffer
+    const hash = crypto.createHash('sha256').update(seed).digest();
+    buffer = Buffer.alloc(length);
+    for (let i = 0; i < length; i++) {
+      buffer[i] = hash[i % hash.length]; // Repeat hash bytes if length > 32
     }
   } else {
     buffer = crypto.randomBytes(length);
   }
 
   const key = buffer.toString(format);
-  const createdAt = Date.now();
 
   return {
     key,
-    createdAt,
     algorithm: format,
   };
 }
@@ -50,11 +47,12 @@ export function generateApiKey(
  * @param prefix - Prefix for the API key (default: 'dv')
  * @returns Formatted API key with prefix
  */
-export function generateUniqueApiKey(userId: string, prefix: string = 'dv'): ApiKeyData {
-  const { key: randomPart, createdAt, algorithm } = generateApiKey(24); // 24 bytes = 32 chars in base64url
-  const timestamp = Date.now().toString(36); // Compact timestamp
+export function generateUniqueApiKey(userId: string, prefix: string = 'dv', createdAt?: number): ApiKeyData {
+  const effectiveCreatedAt = createdAt || Date.now();
+  const { key: randomPart, algorithm } = generateApiKey(24); // 24 bytes = 32 chars in base64url
+  const timestamp = effectiveCreatedAt.toString(36); // Compact timestamp
   const formattedKey = `${prefix}.${timestamp}.${randomPart}`;
-  return { key: formattedKey, createdAt, algorithm };
+  return { key: formattedKey, createdAt: effectiveCreatedAt, algorithm };
 }
 
 /**
@@ -88,22 +86,28 @@ export function maskApiKey(apiKey: string, visibleChars: number = 8): string {
  */
 export function isValidApiKeyFormat(apiKey: string, strictDotDelimiter: boolean = false): boolean {
   let normalizedKey = apiKey;
-  if (!strictDotDelimiter && apiKey.includes('_')) {
-    // Only replace the first two underscores (delimiters between prefix, timestamp, and random part)
-    // The random part may contain underscores as it uses base64url encoding
+  const newFormatPattern = /^[a-zA-Z]{2,}\.[0-9a-z]+\.[A-Za-z0-9_-]{32,}$/;
+
+  // If strictDotDelimiter is true, or if the key already matches the new format,
+  // then no legacy normalization is needed.
+  if (strictDotDelimiter || newFormatPattern.test(apiKey)) {
+    normalizedKey = apiKey;
+  } else if (apiKey.includes('_')) {
+    // Attempt to normalize legacy underscore-delimited keys
     const parts = apiKey.split('_');
     if (parts.length >= 3) {
+      // Replace only the first two underscores with dots, keep subsequent underscores in the random part
       normalizedKey = `${parts[0]}.${parts[1]}.${parts.slice(2).join('_')}`;
     } else {
+      // If less than 3 parts, replace all underscores with dots (older legacy format)s
       normalizedKey = apiKey.replace(/_/g, '.');
     }
     console.log('Legacy API key format detected and normalized.');
   }
 
   // Check if it matches our generated format: prefix.timestamp.randompart (now always with dots)
-  const apiKeyPattern = /^[a-zA-Z]{2,}\.[0-9a-z]+\.[A-Za-z0-9_-]{32,}$/;
-  
-  if (!apiKeyPattern.test(normalizedKey)) {
+  // Use the newFormatPattern directly
+  if (!newFormatPattern.test(normalizedKey)) {
     return false;
   }
   
@@ -123,7 +127,6 @@ export function isValidApiKeyFormat(apiKey: string, strictDotDelimiter: boolean 
     const timestamp = parseInt(timestampPart, 36);
     const now = Date.now();
     
-    // Timestamp should be a positive number and not in the future
     // Allow a small buffer (5 seconds) for clock differences
     return timestamp > 0 && timestamp <= now + 5000;
   } catch (e) {

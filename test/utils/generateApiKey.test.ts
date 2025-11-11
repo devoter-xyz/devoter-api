@@ -20,11 +20,11 @@ describe('API Key Generation', () => {
     it('should generate a random API key of default length (32 bytes, 43 base64url chars)', () => {
       const apiKey = generateApiKey();
       // Default length is 32 bytes, which is approximately 43 characters in base64url
-      expect(typeof apiKey).toBe('string');
-      expect(apiKey.length).toBeGreaterThanOrEqual(42);
-      expect(apiKey.length).toBeLessThanOrEqual(44);
+      expect(typeof apiKey.key).toBe('string');
+      expect(apiKey.key.length).toBeGreaterThanOrEqual(42);
+      expect(apiKey.key.length).toBeLessThanOrEqual(44);
       // Should be a valid base64url string
-      expect(apiKey).toMatch(/^[A-Za-z0-9_-]+$/); 
+      expect(apiKey.key).toMatch(/^[A-Za-z0-9_-]+$/); 
     });
 
   // Should generate a random API key of custom byte length
@@ -32,10 +32,10 @@ describe('API Key Generation', () => {
       const length = 16; // 16 bytes
       const apiKey = generateApiKey(length);
       // 16 bytes is approximately 22 characters in base64url
-      expect(typeof apiKey).toBe('string');
-      expect(apiKey.length).toBeGreaterThanOrEqual(21);
-      expect(apiKey.length).toBeLessThanOrEqual(23);
-      expect(apiKey).toMatch(/^[A-Za-z0-9_-]+$/);
+      expect(typeof apiKey.key).toBe('string');
+      expect(apiKey.key.length).toBeGreaterThanOrEqual(21);
+      expect(apiKey.key.length).toBeLessThanOrEqual(23);
+      expect(apiKey.key).toMatch(/^[A-Za-z0-9_-]+$/);
     });
 
   // Should generate different keys on each call (randomness)
@@ -48,17 +48,17 @@ describe('API Key Generation', () => {
     // Should generate deterministic API keys when a seed is provided
     it('should generate deterministic API keys when a seed is provided', () => {
       const seed = 'test-seed-123';
-      const key1 = generateApiKey(32, seed);
-      const key2 = generateApiKey(32, seed);
-      expect(key1).toBe(key2); // Expect same key for same seed
+      const key1 = generateApiKey(32, 'base64url', seed); // Corrected seed parameter
+      const key2 = generateApiKey(32, 'base64url', seed); // Corrected seed parameter
+      expect(key1.key).toBe(key2.key); // Expect same key for same seed
 
-      const key3 = generateApiKey(16, seed);
-      const key4 = generateApiKey(16, seed);
-      expect(key3).toBe(key4); // Expect same key for same seed and length
+      const key3 = generateApiKey(16, 'base64url', seed); // Corrected seed parameter
+      const key4 = generateApiKey(16, 'base64url', seed); // Corrected seed parameter
+      expect(key3.key).toBe(key4.key); // Expect same key for same seed and length
 
       const differentSeed = 'another-seed';
-      const key5 = generateApiKey(32, differentSeed);
-      expect(key1).not.toBe(key5); // Expect different key for different seed
+      const key5 = generateApiKey(32, 'base64url', differentSeed); // Corrected seed parameter
+      expect(key1.key).not.toBe(key5.key); // Expect different key for different seed
     });
   });
 
@@ -70,10 +70,10 @@ describe('API Key Generation', () => {
       const apiKey = generateUniqueApiKey(userId);
       
       // Should start with default prefix 'dv'
-      expect(apiKey.startsWith('dv.')).toBe(true);
+      expect(apiKey.key.startsWith('dv.')).toBe(true);
       
       // Should have the format: prefix_timestamp_randompart
-      const parts = apiKey.split('.');
+      const parts = apiKey.key.split('.');
       expect(parts.length).toBeGreaterThanOrEqual(3);
       expect(parts[0]).toBe('dv');
       
@@ -91,9 +91,9 @@ describe('API Key Generation', () => {
       const prefix = 'test';
       const apiKey = generateUniqueApiKey(userId, prefix);
       
-      expect(apiKey.startsWith('test.')).toBe(true);
+      expect(apiKey.key.startsWith('test.')).toBe(true);
       
-      const parts = apiKey.split('.');
+      const parts = apiKey.key.split('.');
       expect(parts.length).toBeGreaterThanOrEqual(3);
       expect(parts[0]).toBe('test');
     });
@@ -103,7 +103,7 @@ describe('API Key Generation', () => {
       const userId = '123456';
       const key1 = generateUniqueApiKey(userId);
       const key2 = generateUniqueApiKey(userId);
-      expect(key1).not.toBe(key2);
+      expect(key1.key).not.toBe(key2.key);
     });
   });
 
@@ -173,7 +173,7 @@ describe('API Key Generation', () => {
     it('should return true for correctly formatted API keys (prefix, timestamp, random part)', () => {
       // Generate a valid key with current timestamp
       const validKey = generateUniqueApiKey('test-user');
-      expect(isValidApiKeyFormat(validKey)).toBe(true);
+      expect(isValidApiKeyFormat(validKey.key)).toBe(true);
       
       // Test with custom valid keys that have valid timestamps
       const currentTimestamp = Date.now().toString(36);
@@ -254,8 +254,8 @@ describe('API Key Generation', () => {
       
       // Each key should be valid
       keys.forEach(key => {
-        expect(key.startsWith('dv.')).toBe(true);
-        expect(isValidApiKeyFormat(key)).toBe(true);
+        expect(key.key.startsWith('dv.')).toBe(true);
+        expect(isValidApiKeyFormat(key.key)).toBe(true);
       });
     });
 
@@ -266,7 +266,7 @@ describe('API Key Generation', () => {
       const keys = generateMultipleApiKeys(count, userId);
       
       // Check that all keys are unique
-      const uniqueKeys = new Set(keys);
+      const uniqueKeys = new Set(keys.map(k => k.key));
       expect(uniqueKeys.size).toBe(count);
     });
 
