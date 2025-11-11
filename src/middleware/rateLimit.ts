@@ -15,13 +15,8 @@ function parseEnvInt(envVar: string | undefined, defaultValue: number, envName: 
     throw new Error(`Invalid environment variable "${envName}" value: "${envVar}". Must be a positive integer.`);
   }
   return numericValue;
-  return parsedValue;
 }
 
-/**
-/**
- * Rate limiting configuration for different endpoint types
- */
 /**
  * Rate limiting configuration for different endpoint types.
  *
@@ -79,7 +74,6 @@ export const rateLimitConfigs = {
 };
 
 /**
-/**
  * Custom error response for rate limit exceeded
  */
 export const rateLimitErrorHandler = (request: FastifyRequest, context: any) => {
@@ -94,7 +88,6 @@ export const rateLimitErrorHandler = (request: FastifyRequest, context: any) => 
   };
 };
 
-/**
 /**
  * Key generator for rate limiting - uses IP + wallet address if available
  */
@@ -113,7 +106,6 @@ export const rateLimitKeyGenerator = (request: FastifyRequest) => {
   return ip;
 };
 
-/**
 /**
  * Register rate limiting plugin with different configurations
  */
@@ -135,7 +127,6 @@ export async function registerRateLimiting(fastify: FastifyInstance) {
   });
 }
 
-/**
 /**
  * Create rate limit preHandler for specific configurations
  */
