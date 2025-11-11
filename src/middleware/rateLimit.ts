@@ -5,11 +5,25 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 /**
  * Rate limiting configuration for different endpoint types
  */
+/**
+ * Rate limiting configuration for different endpoint types.
+ *
+ * Configuration options can be set via environment variables:
+ * - RATE_LIMIT_<TYPE>_MAX: Maximum requests allowed (e.g., RATE_LIMIT_GENERAL_MAX)
+ * - RATE_LIMIT_<TYPE>_TIMEWINDOW: Time window in milliseconds (e.g., RATE_LIMIT_GENERAL_TIMEWINDOW)
+ *
+ * Example:
+ * ```typescript
+ * // Set general rate limit to 200 requests per 30 seconds
+ * process.env.RATE_LIMIT_GENERAL_MAX = '200';
+ * process.env.RATE_LIMIT_GENERAL_TIMEWINDOW = '30000';
+ * ```
+ */
 export const rateLimitConfigs = {
   // General API rate limit
   general: {
     max: parseInt(process.env.RATE_LIMIT_GENERAL_MAX || '100'), // 100 requests
-    timeWindow: 60 * 1000, // per minute
+    timeWindow: parseInt(process.env.RATE_LIMIT_GENERAL_TIMEWINDOW || String(60 * 1000)), // per minute
     skipSuccessfulRequests: false,
     skipOnError: false,
   },
@@ -17,7 +31,7 @@ export const rateLimitConfigs = {
   // Authentication endpoints
   auth: {
     max: parseInt(process.env.RATE_LIMIT_AUTH_MAX || '10'), // 10 requests
-    timeWindow: 60 * 1000, // per minute
+    timeWindow: parseInt(process.env.RATE_LIMIT_AUTH_TIMEWINDOW || String(60 * 1000)), // per minute
     skipSuccessfulRequests: false,
     skipOnError: false,
   },
@@ -25,7 +39,7 @@ export const rateLimitConfigs = {
   // API key creation
   apiKeyCreation: {
     max: parseInt(process.env.RATE_LIMIT_API_KEY_CREATION_MAX || '3'), // 3 API key creations
-    timeWindow: 60 * 1000, // per minute
+    timeWindow: parseInt(process.env.RATE_LIMIT_API_KEY_CREATION_TIMEWINDOW || String(60 * 1000)), // per minute
     skipSuccessfulRequests: false,
     skipOnError: false,
   },
@@ -33,7 +47,7 @@ export const rateLimitConfigs = {
   // Registration
   registration: {
     max: parseInt(process.env.RATE_LIMIT_REGISTRATION_MAX || '5'), // 5 registration attempts
-    timeWindow: 60 * 1000, // per minute
+    timeWindow: parseInt(process.env.RATE_LIMIT_REGISTRATION_TIMEWINDOW || String(60 * 1000)), // per minute
     skipSuccessfulRequests: false,
     skipOnError: false,
   },
@@ -41,7 +55,7 @@ export const rateLimitConfigs = {
   // Health checks
   health: {
     max: parseInt(process.env.RATE_LIMIT_HEALTH_MAX || '200'), // 200 requests
-    timeWindow: 60 * 1000, // per minute
+    timeWindow: parseInt(process.env.RATE_LIMIT_HEALTH_TIMEWINDOW || String(60 * 1000)), // per minute
     skipSuccessfulRequests: true,
     skipOnError: true,
   }
