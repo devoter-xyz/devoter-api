@@ -11,7 +11,7 @@ export const comments: Array<{
 }> = [];
 
 import { validateCommentInput } from '../utils/validation.js';
-import { ApiError, HttpStatusCode } from '../utils/errorHandler.js';
+import { ApiError, asyncHandler } from '../utils/errorHandler.js';
 
 const commentsRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) => {
   // Get comments for a poll
@@ -24,7 +24,7 @@ const commentsRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) => {
 
   // Post a new comment to a poll
 
-  fastify.post('/poll/:pollId', async (request: FastifyRequest<{ Params: { pollId: string }; Body: { user: string; comment: string } }>, reply: FastifyReply) => {
+  fastify.post('/poll/:pollId', asyncHandler(async (request: FastifyRequest<{ Params: { pollId: string }; Body: { user: string; comment: string } }>, reply: FastifyReply) => {
     const { pollId } = request.params;
     const { user, comment } = request.body;
 
@@ -33,12 +33,7 @@ const commentsRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) => {
 
     const validation = validateCommentInput({ user: trimmedUser, comment: trimmedComment });
     if (!validation.isValid) {
-      reply.status(400).send({
-        success: false,
-        code: "BAD_REQUEST",
-        message: validation.error,
-      });
-      return;
+      throw ApiError.badRequest(validation.error, "BAD_REQUEST");
     }
     const newComment = {
       id: Math.random().toString(36).substr(2, 9),
@@ -54,21 +49,16 @@ const commentsRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) => {
 
   // Delete a comment by id
 
-  fastify.delete('/:id', async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+  fastify.delete('/:id', asyncHandler(async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
     const { id } = request.params;
     const idx = comments.findIndex(c => c.id === id);
     if (idx === -1) {
-      reply.status(404).send({
-        success: false,
-        code: "NOT_FOUND",
-        message: "Comment not found.",
-      });
-      return;
+      throw ApiError.notFound("Comment not found.", "NOT_FOUND");
     }
     comments.splice(idx, 1);
     reply.status(204);
     return undefined;
-  });
+  }));
 };
 
 export default commentsRoutes;
