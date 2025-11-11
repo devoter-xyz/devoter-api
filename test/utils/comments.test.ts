@@ -82,7 +82,7 @@ describe('Comments Routes', () => {
         },
       });
 
-      expect(response.statusCode).toBe(200);
+      expect(response.statusCode).toBe(201);
       const payload = JSON.parse(response.payload);
       expect(payload).toHaveProperty('id');
       expect(payload.pollId).toBe('poll789');
@@ -258,7 +258,7 @@ describe('Comments Routes', () => {
         url: '/commentToDelete',
       });
 
-      expect(response.statusCode).toBe(200);
+      expect(response.statusCode).toBe(204);
       expect(response.payload).toBe(''); // 204 No Content should have an empty payload
       expect(comments.length).toBe(0); // Check if comment was removed
     });

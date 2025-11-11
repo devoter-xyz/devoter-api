@@ -28,8 +28,8 @@ const commentsRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) => {
     const { pollId } = request.params;
     const { user, comment } = request.body;
 
-    const trimmedUser = user.trim();
-    const trimmedComment = comment.trim();
+    const trimmedUser = (user || '').trim();
+    const trimmedComment = (comment || '').trim();
 
     const validation = validateCommentInput({ user: trimmedUser, comment: trimmedComment });
     if (!validation.isValid) {
@@ -45,7 +45,7 @@ const commentsRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) => {
     comments.push(newComment);
     reply.status(201);
     return newComment;
-  });
+  }));
 
   // Delete a comment by id
 
