@@ -106,6 +106,7 @@ test('should return 400 for invalid wallet address format', async () => {
   expect(response.json()).toEqual({
     statusCode: 400,
     code: 'FST_ERR_VALIDATION',
+    error: 'Bad Request',
     message: 'body/walletAddress must match pattern "^0x[a-fA-F0-9]{40}$"'
   });
 });
@@ -114,7 +115,6 @@ test('should return 400 for invalid wallet address format', async () => {
 test('should return 400 for missing message', async () => {
   const response = await app.inject({
     method: 'POST',
-    url: '/register',
     payload: {
       walletAddress: wallet.address,
       signature: signature,
@@ -125,6 +125,7 @@ test('should return 400 for missing message', async () => {
   expect(response.json()).toEqual({
     statusCode: 400,
     code: 'FST_ERR_VALIDATION',
+    error: 'Bad Request',
     message: 'body must have required property \'message\''
   });
 });
@@ -144,6 +145,7 @@ test('should return 400 for missing signature', async () => {
   expect(response.json()).toEqual({
     statusCode: 400,
     code: 'FST_ERR_VALIDATION',
+    error: 'Bad Request',
     message: 'body must have required property \'signature\''
   });
 });
@@ -164,6 +166,7 @@ test('should return 400 for invalid signature format', async () => {
   expect(response.json()).toEqual({
     statusCode: 400,
     code: 'FST_ERR_VALIDATION',
+    error: 'Bad Request',
     message: 'body/signature must match pattern "^0x[a-fA-F0-9]{130}$"'
   });
 });
