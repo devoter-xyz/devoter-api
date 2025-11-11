@@ -6,13 +6,13 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
  * Returns the defaultValue if the envVar is undefined.
  * Throws an error if the parsed value is not a positive integer.
  */
-function parseEnvInt(envVar: string | undefined, defaultValue: number): number {
+function parseEnvInt(envVar: string | undefined, defaultValue: number, envName: string): number {
   if (envVar === undefined) {
     return defaultValue;
   }
   const parsedValue = parseInt(envVar, 10);
   if (isNaN(parsedValue) || parsedValue <= 0) {
-    throw new Error(`Invalid environment variable value: "${envVar}". Must be a positive integer.`);
+    throw new Error(`Invalid environment variable "${envName}" value: "${envVar}". Must be a positive integer.`);
   }
   return parsedValue;
 }
@@ -38,40 +38,40 @@ function parseEnvInt(envVar: string | undefined, defaultValue: number): number {
 export const rateLimitConfigs = {
   // General API rate limit
   general: {
-    max: parseEnvInt(process.env.RATE_LIMIT_GENERAL_MAX, 100), // 100 requests
-    timeWindow: parseEnvInt(process.env.RATE_LIMIT_GENERAL_TIMEWINDOW, 60 * 1000), // per minute
+    max: parseEnvInt(process.env.RATE_LIMIT_GENERAL_MAX, 100, 'RATE_LIMIT_GENERAL_MAX'), // 100 requests
+    timeWindow: parseEnvInt(process.env.RATE_LIMIT_GENERAL_TIMEWINDOW, 60 * 1000, 'RATE_LIMIT_GENERAL_TIMEWINDOW'), // per minute
     skipSuccessfulRequests: false,
     skipOnError: false,
   },
 
   // Authentication endpoints
   auth: {
-    max: parseEnvInt(process.env.RATE_LIMIT_AUTH_MAX, 10), // 10 requests
-    timeWindow: parseEnvInt(process.env.RATE_LIMIT_AUTH_TIMEWINDOW, 60 * 1000), // per minute
+    max: parseEnvInt(process.env.RATE_LIMIT_AUTH_MAX, 10, 'RATE_LIMIT_AUTH_MAX'), // 10 requests
+    timeWindow: parseEnvInt(process.env.RATE_LIMIT_AUTH_TIMEWINDOW, 60 * 1000, 'RATE_LIMIT_AUTH_TIMEWINDOW'), // per minute
     skipSuccessfulRequests: false,
     skipOnError: false,
   },
 
   // API key creation
   apiKeyCreation: {
-    max: parseEnvInt(process.env.RATE_LIMIT_API_KEY_CREATION_MAX, 3), // 3 API key creations
-    timeWindow: parseEnvInt(process.env.RATE_LIMIT_API_KEY_CREATION_TIMEWINDOW, 60 * 1000), // per minute
+    max: parseEnvInt(process.env.RATE_LIMIT_API_KEY_CREATION_MAX, 3, 'RATE_LIMIT_API_KEY_CREATION_MAX'), // 3 API key creations
+    timeWindow: parseEnvInt(process.env.RATE_LIMIT_API_KEY_CREATION_TIMEWINDOW, 60 * 1000, 'RATE_LIMIT_API_KEY_CREATION_TIMEWINDOW'), // per minute
     skipSuccessfulRequests: false,
     skipOnError: false,
   },
 
   // Registration
   registration: {
-    max: parseEnvInt(process.env.RATE_LIMIT_REGISTRATION_MAX, 5), // 5 registration attempts
-    timeWindow: parseEnvInt(process.env.RATE_LIMIT_REGISTRATION_TIMEWINDOW, 60 * 1000), // per minute
+    max: parseEnvInt(process.env.RATE_LIMIT_REGISTRATION_MAX, 5, 'RATE_LIMIT_REGISTRATION_MAX'), // 5 registration attempts
+    timeWindow: parseEnvInt(process.env.RATE_LIMIT_REGISTRATION_TIMEWINDOW, 60 * 1000, 'RATE_LIMIT_REGISTRATION_TIMEWINDOW'), // per minute
     skipSuccessfulRequests: false,
     skipOnError: false,
   },
 
   // Health checks
   health: {
-    max: parseEnvInt(process.env.RATE_LIMIT_HEALTH_MAX, 200), // 200 requests
-    timeWindow: parseEnvInt(process.env.RATE_LIMIT_HEALTH_TIMEWINDOW, 60 * 1000), // per minute
+    max: parseEnvInt(process.env.RATE_LIMIT_HEALTH_MAX, 200, 'RATE_LIMIT_HEALTH_MAX'), // 200 requests
+    timeWindow: parseEnvInt(process.env.RATE_LIMIT_HEALTH_TIMEWINDOW, 60 * 1000, 'RATE_LIMIT_HEALTH_TIMEWINDOW'), // per minute
     skipSuccessfulRequests: true,
     skipOnError: true,
   }
