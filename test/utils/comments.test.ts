@@ -171,7 +171,7 @@ describe('Comments Routes', () => {
         method: 'POST',
         url: '/poll/poll789',
         payload: {
-          user: 'ab',
+          user: '  a  ', // Trimmed length is 1, min is 3
           comment: 'This is a new comment.',
         },
       });

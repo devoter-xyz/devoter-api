@@ -209,7 +209,7 @@ export function asyncHandler<RouteGeneric extends RouteGenericInterface = RouteG
 ) {
   return async (request: FastifyRequest<RouteGeneric>, reply: FastifyReply) => {
     try {
-      await handler(request, reply);
+      return await handler(request, reply);
     } catch (error) {
       handleError(error as Error, request, reply);
     }
