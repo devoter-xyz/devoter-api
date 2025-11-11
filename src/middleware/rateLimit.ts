@@ -10,10 +10,11 @@ function parseEnvInt(envVar: string | undefined, defaultValue: number, envName: 
   if (envVar === undefined) {
     return defaultValue;
   }
-  const parsedValue = parseInt(envVar, 10);
-  if (isNaN(parsedValue) || parsedValue <= 0) {
+  const numericValue = Number(envVar);
+  if (!Number.isInteger(numericValue) || numericValue <= 0) {
     throw new Error(`Invalid environment variable "${envName}" value: "${envVar}". Must be a positive integer.`);
   }
+  return numericValue;
   return parsedValue;
 }
 
