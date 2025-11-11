@@ -10,9 +10,11 @@ config();
  * Starts the Fastify server with all middleware, plugins, and routes registered.
  * Handles environment configuration, error handling, CORS, rate limiting, and API routes.
  */
+import type { FastifyInstance } from "fastify";
+
 if (process.env.NODE_ENV !== "test") {
   const start = async () => {
-    let server;
+    let server: FastifyInstance;
     try {
       server = await build();
       // Parse and validate the port from environment variables (default: 3000)
