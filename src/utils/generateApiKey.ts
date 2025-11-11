@@ -1,12 +1,25 @@
 import * as crypto from 'crypto';
 
+export type ApiKeyFormat = 'hex' | 'base64url';
+
+export interface ApiKeyData {
+  key: string;
+  createdAt: number;
+  algorithm: ApiKeyFormat;
+}
+
 /**
- * Generate a secure API key using cryptographic random bytes
- * @param length - Length of the API key (default: 32)
+ * Generate a secure API key using cryptographic random bytes with configurable format and metadata.
+ * @param length - Length of the API key in bytes (default: 32)
+ * @param format - Encoding format for the key ('hex' or 'base64url', default: 'base64url')
  * @param seed - Optional seed for deterministic key generation (for testing)
- * @returns Base64URL encoded API key
+ * @returns An object containing the API key, creation timestamp, and algorithm used.
  */
-export function generateApiKey(length: number = 32, seed?: string): string {
+export function generateApiKey(
+  length: number = 32,
+  format: ApiKeyFormat = 'base64url',
+  seed?: string
+): ApiKeyData {
   let buffer: Buffer;
   if (seed) {
     // Use a seeded hash for deterministic output in testing
@@ -20,7 +33,15 @@ export function generateApiKey(length: number = 32, seed?: string): string {
   } else {
     buffer = crypto.randomBytes(length);
   }
-  return buffer.toString('base64url');
+
+  const key = buffer.toString(format);
+  const createdAt = Date.now();
+
+  return {
+    key,
+    createdAt,
+    algorithm: format,
+  };
 }
 
 /**
@@ -29,10 +50,11 @@ export function generateApiKey(length: number = 32, seed?: string): string {
  * @param prefix - Prefix for the API key (default: 'dv')
  * @returns Formatted API key with prefix
  */
-export function generateUniqueApiKey(userId: string, prefix: string = 'dv'): string {
-  const randomPart = generateApiKey(24); // 24 bytes = 32 chars in base64url
+export function generateUniqueApiKey(userId: string, prefix: string = 'dv'): ApiKeyData {
+  const { key: randomPart, createdAt, algorithm } = generateApiKey(24); // 24 bytes = 32 chars in base64url
   const timestamp = Date.now().toString(36); // Compact timestamp
-  return `${prefix}.${timestamp}.${randomPart}`;
+  const formattedKey = `${prefix}.${timestamp}.${randomPart}`;
+  return { key: formattedKey, createdAt, algorithm };
 }
 
 /**
@@ -115,8 +137,8 @@ export function isValidApiKeyFormat(apiKey: string, strictDotDelimiter: boolean 
  * @param userId - User ID for the keys
  * @returns Array of generated API keys
  */
-export function generateMultipleApiKeys(count: number, userId: string): string[] {
-  const keys: string[] = [];
+export function generateMultipleApiKeys(count: number, userId: string): ApiKeyData[] {
+  const keys: ApiKeyData[] = [];
   for (let i = 0; i < count; i++) {
     keys.push(generateUniqueApiKey(userId));
   }
