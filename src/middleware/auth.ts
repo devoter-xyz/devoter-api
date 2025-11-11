@@ -133,11 +133,13 @@ declare module 'fastify' {
 
 /**
  * Middleware to verify API key from Authorization header.
+ * Expected Authorization header format: "Bearer <API_KEY>".
+ * The API_KEY itself is expected to be in a specific format (e.g., prefix.timestamp.randomstring).
  * Extracts, validates, and authenticates the API key against the database.
  * Attaches user information to request.user if authentication is successful.
+ * Throws ApiError for missing headers, malformed tokens, invalid formats, or inactive keys.
  * @param request FastifyRequest instance.
  * @param reply FastifyReply instance.
- * @param done Callback to continue request processing.
  */
 export async function verifyApiKey(
   request: FastifyRequest,

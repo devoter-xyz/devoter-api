@@ -1,7 +1,8 @@
 /**
  * Extracts a Bearer token from the Authorization header.
- * @param header The Authorization header string.
- * @returns The extracted token string, or null if not found or malformed.
+ *
+ * @param header The Authorization header string. Expected format: "Bearer <token>".
+ * @returns The extracted token string, or null if the header is missing, malformed, or not a Bearer token.
  */
 export function extractBearerToken(header: string): string | null {
   const parts = header.split(' ');

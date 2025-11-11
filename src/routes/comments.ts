@@ -33,7 +33,12 @@ const commentsRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) => {
 
     const validation = validateCommentInput({ user: trimmedUser, comment: trimmedComment });
     if (!validation.isValid) {
-      throw ApiError.badRequest(validation.error);
+      reply.status(400).send({
+        success: false,
+        code: "BAD_REQUEST",
+        message: validation.error,
+      });
+      return;
     }
     const newComment = {
       id: Math.random().toString(36).substr(2, 9),
@@ -53,7 +58,12 @@ const commentsRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) => {
     const { id } = request.params;
     const idx = comments.findIndex(c => c.id === id);
     if (idx === -1) {
-      throw ApiError.notFound('Comment not found.');
+      reply.status(404).send({
+        success: false,
+        code: "NOT_FOUND",
+        message: "Comment not found.",
+      });
+      return;
     }
     comments.splice(idx, 1);
     reply.status(204);
