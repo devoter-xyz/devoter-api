@@ -2,52 +2,77 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 
 /**
+ * Parses an environment variable string into a positive integer.
+ * Returns the defaultValue if the envVar is undefined.
+ * Throws an error if the parsed value is not a positive integer.
+ */
+function parseEnvInt(envVar: string | undefined, defaultValue: number, envName: string): number {
+  if (envVar === undefined) {
+    return defaultValue;
+  }
+  const numericValue = Number(envVar);
+  if (!Number.isInteger(numericValue) || numericValue <= 0) {
+    throw new Error(`Invalid environment variable "${envName}" value: "${envVar}". Must be a positive integer.`);
+  }
+  return numericValue;
+}
+
 /**
- * Rate limiting configuration for different endpoint types
+ * Rate limiting configuration for different endpoint types.
+ *
+ * Configuration options can be set via environment variables:
+ * - RATE_LIMIT_<TYPE>_MAX: Maximum requests allowed (e.g., RATE_LIMIT_GENERAL_MAX)
+ * - RATE_LIMIT_<TYPE>_TIMEWINDOW: Time window in milliseconds (e.g., RATE_LIMIT_GENERAL_TIMEWINDOW)
+ *
+ * Example:
+ * ```typescript
+ * // Set general rate limit to 200 requests per 30 seconds
+ * process.env.RATE_LIMIT_GENERAL_MAX = '200';
+ * process.env.RATE_LIMIT_GENERAL_TIMEWINDOW = '30000';
+ * ```
  */
 export const rateLimitConfigs = {
   // General API rate limit
   general: {
-    max: parseInt(process.env.RATE_LIMIT_GENERAL_MAX || '100'), // 100 requests
-    timeWindow: 60 * 1000, // per minute
+    max: parseEnvInt(process.env.RATE_LIMIT_GENERAL_MAX, 100, 'RATE_LIMIT_GENERAL_MAX'), // 100 requests
+    timeWindow: parseEnvInt(process.env.RATE_LIMIT_GENERAL_TIMEWINDOW, 60 * 1000, 'RATE_LIMIT_GENERAL_TIMEWINDOW'), // per minute
     skipSuccessfulRequests: false,
     skipOnError: false,
   },
 
   // Authentication endpoints
   auth: {
-    max: parseInt(process.env.RATE_LIMIT_AUTH_MAX || '10'), // 10 requests
-    timeWindow: 60 * 1000, // per minute
+    max: parseEnvInt(process.env.RATE_LIMIT_AUTH_MAX, 10, 'RATE_LIMIT_AUTH_MAX'), // 10 requests
+    timeWindow: parseEnvInt(process.env.RATE_LIMIT_AUTH_TIMEWINDOW, 60 * 1000, 'RATE_LIMIT_AUTH_TIMEWINDOW'), // per minute
     skipSuccessfulRequests: false,
     skipOnError: false,
   },
 
   // API key creation
   apiKeyCreation: {
-    max: parseInt(process.env.RATE_LIMIT_API_KEY_CREATION_MAX || '3'), // 3 API key creations
-    timeWindow: 60 * 1000, // per minute
+    max: parseEnvInt(process.env.RATE_LIMIT_API_KEY_CREATION_MAX, 3, 'RATE_LIMIT_API_KEY_CREATION_MAX'), // 3 API key creations
+    timeWindow: parseEnvInt(process.env.RATE_LIMIT_API_KEY_CREATION_TIMEWINDOW, 60 * 1000, 'RATE_LIMIT_API_KEY_CREATION_TIMEWINDOW'), // per minute
     skipSuccessfulRequests: false,
     skipOnError: false,
   },
 
   // Registration
   registration: {
-    max: parseInt(process.env.RATE_LIMIT_REGISTRATION_MAX || '5'), // 5 registration attempts
-    timeWindow: 60 * 1000, // per minute
+    max: parseEnvInt(process.env.RATE_LIMIT_REGISTRATION_MAX, 5, 'RATE_LIMIT_REGISTRATION_MAX'), // 5 registration attempts
+    timeWindow: parseEnvInt(process.env.RATE_LIMIT_REGISTRATION_TIMEWINDOW, 60 * 1000, 'RATE_LIMIT_REGISTRATION_TIMEWINDOW'), // per minute
     skipSuccessfulRequests: false,
     skipOnError: false,
   },
 
   // Health checks
   health: {
-    max: parseInt(process.env.RATE_LIMIT_HEALTH_MAX || '200'), // 200 requests
-    timeWindow: 60 * 1000, // per minute
+    max: parseEnvInt(process.env.RATE_LIMIT_HEALTH_MAX, 200, 'RATE_LIMIT_HEALTH_MAX'), // 200 requests
+    timeWindow: parseEnvInt(process.env.RATE_LIMIT_HEALTH_TIMEWINDOW, 60 * 1000, 'RATE_LIMIT_HEALTH_TIMEWINDOW'), // per minute
     skipSuccessfulRequests: true,
     skipOnError: true,
   }
 };
 
-/**
 /**
  * Custom error response for rate limit exceeded
  */
@@ -63,7 +88,6 @@ export const rateLimitErrorHandler = (request: FastifyRequest, context: any) => 
   };
 };
 
-/**
 /**
  * Key generator for rate limiting - uses IP + wallet address if available
  */
@@ -82,7 +106,6 @@ export const rateLimitKeyGenerator = (request: FastifyRequest) => {
   return ip;
 };
 
-/**
 /**
  * Register rate limiting plugin with different configurations
  */
@@ -104,7 +127,6 @@ export async function registerRateLimiting(fastify: FastifyInstance) {
   });
 }
 
-/**
 /**
  * Create rate limit preHandler for specific configurations
  */
