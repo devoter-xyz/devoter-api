@@ -155,4 +155,51 @@ describe('Notifications Route', () => {
       expect(JSON.parse(response.payload).message).toContain('querystring/offset must be >= 0');
     });
   });
+
+  describe('POST /notifications', () => {
+    it('should prevent replay attacks by rejecting duplicate signatures', async () => {
+      // Mock verifySignatureWithTimestamp to always return valid
+      vi.mock('~/utils/verifySignature.js', () => ({
+        verifySignatureWithTimestamp: vi.fn(() => ({ isValid: true, error: null }))
+      }));
+
+      const user = '0x1234567890abcdef';
+      const signedMessage = 'test_message';
+      const signature = '0xabcdef1234567890';
+
+      // First request should succeed
+      const firstResponse = await app.inject({
+        method: 'POST',
+        url: '/notifications',
+        headers: {
+          'x-user-address': user,
+          'x-signed-message': signedMessage,
+          'x-signature': signature,
+        },
+        payload: {
+          message: 'Hello World',
+        },
+      });
+
+      expect(firstResponse.statusCode).toBe(200);
+      expect(JSON.parse(firstResponse.payload).message).toBe('Notification created successfully.');
+
+      // Second request with the same signature should be rejected
+      const secondResponse = await app.inject({
+        method: 'POST',
+        url: '/notifications',
+        headers: {
+          'x-user-address': user,
+          'x-signed-message': signedMessage,
+          'x-signature': signature,
+        },
+        payload: {
+          message: 'Hello World Again',
+        },
+      });
+
+      expect(secondResponse.statusCode).toBe(401);
+      expect(JSON.parse(secondResponse.payload).error).toBe('Unauthorized: Message has already been processed.');
+    });
+  });
 });

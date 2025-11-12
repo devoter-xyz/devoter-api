@@ -1,5 +1,8 @@
 import type { FastifyInstance, FastifyPluginOptions } from 'fastify';
 import { verifySignatureWithTimestamp, isValidEthereumAddress } from '../utils/verifySignature';
+import { replayProtectionCache } from '../lib/replayProtectionCache';
+
+const REPLAY_PROTECTION_TTL = 330; // 5.5 minutes, slightly longer than typical 5-minute timestamp window
 
 interface Notification {
   id: string;
@@ -90,6 +93,13 @@ async function notificationsRoutes(fastify: FastifyInstance, options: Notificati
       return { error: 'Invalid Ethereum address format for user.' };
     }
 
+    // Check for replay attack
+    if (replayProtectionCache.has(signature)) {
+      request.log.warn({ user, signedMessage, signature }, 'Replay attack detected: signature already used.');
+      reply.status(401);
+      return { error: "Unauthorized: Message has already been processed." };
+    }
+
     // Verify the signature with timestamp to prevent replay attacks
     const { isValid, error } = verifySignatureWithTimestamp(signedMessage, signature, user);
 
@@ -98,6 +108,9 @@ async function notificationsRoutes(fastify: FastifyInstance, options: Notificati
       reply.status(401);
       return { error: "Unauthorized: Invalid signature or expired message." };
     }
+
+    // Record the signature to prevent replay attacks
+    replayProtectionCache.set(signature, REPLAY_PROTECTION_TTL);
 
     const newNotification: Notification = {
       id: Math.random().toString(36).substr(2, 9),
