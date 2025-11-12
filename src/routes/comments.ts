@@ -24,9 +24,9 @@ const commentsRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) => {
 
   // Post a new comment to a poll
 
-  fastify.post('/poll/:pollId', asyncHandler(async (request: FastifyRequest<{ Params: { pollId: string }; Body: { user: string; comment: string } }>, reply: FastifyReply) => {
+  fastify.post('/poll/:pollId', asyncHandler(async (request: FastifyRequest<{ Params: { pollId: string }; Body: { user?: string; comment?: string } }>, reply: FastifyReply) => {
     const { pollId } = request.params;
-    const { user, comment } = request.body;
+    const { user, comment } = request.body as { user?: string; comment?: string };
 
     const trimmedUser = (user || '').trim();
     const trimmedComment = (comment || '').trim();

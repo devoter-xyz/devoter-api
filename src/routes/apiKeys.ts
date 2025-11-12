@@ -1,3 +1,5 @@
+import { FastifyInstance } from 'fastify';
+import { ApiUser } from '@prisma/client';
 import { verifyWalletSignature, verifyWalletSignatureFromHeaders } from "../middleware/auth.js";
 import { rateLimitConfigs } from "../middleware/rateLimit.js";
 import * as Type from "@sinclair/typebox";
@@ -182,13 +184,7 @@ export default async function apiKeysRoute(fastify: FastifyInstance) {
         enabled: boolean;
       }
 
-      const apiKeys: ApiKeyResponse[] = user.apiKeys.map((key: {
-        id: string;
-        key: string;
-        createdAt: Date;
-        totalUsed?: number;
-        enabled: boolean;
-      }): ApiKeyResponse => {
+      const apiKeys: ApiKeyResponse[] = user.apiKeys.map((key: any) => {
         const apiKeyObj: ApiKeyResponse = {
           id: key.id,
           key: maskApiKey(key.key),
@@ -250,7 +246,7 @@ export default async function apiKeysRoute(fastify: FastifyInstance) {
     handler: asyncHandler(async (request, reply) => {
       const walletAddress = (request.headers["x-wallet-address"] as string).trim().toLowerCase();
 
-      const user = await prisma.apiUser.findUnique({
+      const user: (ApiUser & { apiKeys: ApiKeyMetadata[] }) | null = await prisma.apiUser.findUnique({
         where: { walletAddress },
         include: {
           apiKeys: {
@@ -269,7 +265,12 @@ export default async function apiKeysRoute(fastify: FastifyInstance) {
         throw ApiError.notFound("User not found", "USER_NOT_FOUND");
       }
 
-      const apiKeysMetadata = user.apiKeys.map((key) => ({
+      interface ApiKeyMetadata {
+        id: string;
+        createdAt: Date;
+      }
+
+      const apiKeysMetadata = user.apiKeys.map((key: ApiKeyMetadata) => ({
         id: key.id,
         createdAt: key.createdAt.toISOString(),
       }));
