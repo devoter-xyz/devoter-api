@@ -155,4 +155,55 @@ describe('Notifications Route', () => {
       expect(JSON.parse(response.payload).message).toContain('querystring/offset must be >= 0');
     });
   });
+
+  describe('POST /notifications', () => {
+    it('should prevent replay attacks by rejecting duplicate signatures', async () => {
+      const { verifySignatureWithTimestamp } = await import('~/utils/verifySignature.js');
+      const verifySignatureSpy = vi.spyOn(verifySignatureWithTimestamp, 'verifySignatureWithTimestamp');
+      verifySignatureSpy.mockReturnValue({ isValid: true, error: null });
+
+      const user = '0x1234567890abcdef';
+      const message = 'Hello World';
+      const signedMessage = 'test_message';
+      const signature = '0xabcdef1234567890';
+
+      // First request should succeed
+      const firstResponse = await app.inject({
+        method: 'POST',
+        url: '/notifications',
+        payload: {
+          user,
+          message,
+          signedMessage,
+          signature,
+        },
+      });
+
+      expect(firstResponse.statusCode).toBe(201);
+      const firstPayload = JSON.parse(firstResponse.payload);
+      expect(firstPayload).toMatchObject({
+        user,
+        message,
+      });
+      expect(firstPayload).toHaveProperty('id');
+      expect(firstPayload).toHaveProperty('createdAt');
+
+      // Second request with the same payload should be rejected
+      const secondResponse = await app.inject({
+        method: 'POST',
+        url: '/notifications',
+        payload: {
+          user,
+          message: 'Hello World Again', // Message can be different, signature is the key
+          signedMessage,
+          signature,
+        },
+      });
+
+      expect(secondResponse.statusCode).toBe(401);
+      expect(JSON.parse(secondResponse.payload).error).toBe('Unauthorized: Message has already been processed.');
+
+      verifySignatureSpy.mockRestore(); // Clean up the spy
+    });
+  });
 });
