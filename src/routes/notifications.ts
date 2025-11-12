@@ -99,8 +99,9 @@ async function notificationsRoutes(fastify: FastifyInstance, options: Notificati
     const { isValid, error } = verifySignatureWithTimestamp(signedMessage, signature, user);
 
     if (!isValid) {
+      request.log.error({ user, signedMessage, error }, 'Signature verification failed');
       reply.status(401);
-      return { error: `Unauthorized: Invalid signature or expired message. Details: ${error || "Unknown error"}` };
+      return { error: "Unauthorized: Invalid signature or expired message." };
     }
 
     const newNotification: Notification = {
