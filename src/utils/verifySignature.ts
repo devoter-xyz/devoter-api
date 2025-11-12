@@ -8,28 +8,53 @@ import * as crypto from 'crypto';
  * @param walletAddress - The expected wallet address
  * @returns boolean - True if signature is valid, false otherwise
  */
+/**
+ * Verifies that a message was signed by the specified wallet address.
+ * This function trims whitespace from the message and signature for robustness.
+ *
+ * @param message - The original message that was signed.
+ * @param signature - The signature from the wallet.
+ * @param walletAddress - The expected wallet address.
+ * @returns An object indicating if the signature is valid and an error message if not.
+ *
+ * @example
+ * // Example usage:
+ * // const message = "Hello, World!";
+ * // const signature = "0x..."; // A valid signature for the message
+ * // const walletAddress = "0x..."; // The address that signed the message
+ * // const { isValid, error } = verifySignature(message, signature, walletAddress);
+ * // if (isValid) {
+ * //   console.log("Signature is valid!");
+ * // } else {
+ * //   console.error("Signature verification failed:", error);
+ * // }
+ */
 export function verifySignature(
   message: string,
   signature: string,
   walletAddress: string
 ): { isValid: boolean; error?: string } {
-  if (!message) {
-    return { isValid: false, error: "Message cannot be empty" };
+  const trimmedMessage = message.trim();
+  const trimmedSignature = signature.trim();
+  const trimmedWalletAddress = walletAddress.trim();
+
+  if (!trimmedMessage) {
+    return { isValid: false, error: "Message cannot be empty or just whitespace" };
   }
-  if (!signature) {
-    return { isValid: false, error: "Signature cannot be empty" };
+  if (!trimmedSignature) {
+    return { isValid: false, error: "Signature cannot be empty or just whitespace" };
   }
-  if (!walletAddress) {
-    return { isValid: false, error: "Wallet address cannot be empty" };
+  if (!trimmedWalletAddress) {
+    return { isValid: false, error: "Wallet address cannot be empty or just whitespace" };
   }
 
   try {
     // Recover the address from the signature
-    const recoveredAddress = ethers.verifyMessage(message, signature);
+    const recoveredAddress = ethers.verifyMessage(trimmedMessage, trimmedSignature);
 
     // Convert addresses to buffers for timing-safe comparison
     const recoveredBuffer = Buffer.from(recoveredAddress.toLowerCase());
-    const walletBuffer = Buffer.from(walletAddress.toLowerCase());
+    const walletBuffer = Buffer.from(trimmedWalletAddress.toLowerCase());
 
     // Ensure buffers are of the same length to prevent timing leaks
     // Pad with a non-matching character if lengths differ to maintain timing safety
@@ -44,13 +69,37 @@ export function verifySignature(
     if (crypto.timingSafeEqual(paddedRecovered, paddedWallet)) {
       return { isValid: true };
     } else {
-      return { isValid: false, error: "Signature does not match wallet address" };
+      return { isValid: false, error: "Signature does not match the provided wallet address" };
     }
   } catch (error: any) {
-    // ethers.verifyMessage can throw if signature is malformed
-    return { isValid: false, error: `Signature verification failed: ${error.message || error}` };
+    // ethers.verifyMessage can throw if signature is malformed or invalid
+    return { isValid: false, error: `Signature verification failed: ${error.message || "Unknown error"}. Please check the signature format and content.` };
   }
 }
+
+/**
+ * Verifies a signature with timestamp validation to prevent replay attacks.
+ * The message is expected to contain a timestamp in the format: "Sign this message to <purpose>: [<13-digit-ms-timestamp>]".
+ *
+ * @param message - The original message containing the timestamp that was signed.
+ * @param signature - The signature from the wallet.
+ * @param walletAddress - The expected wallet address.
+ * @param maxAgeMinutes - Optional. Maximum age of the message in minutes (default: 5).
+ * @returns An object indicating if the signature and timestamp are valid, and an error message if not.
+ *
+ * @example
+ * // Example usage:
+ * // const purpose = "login";
+ * // const message = generateSignMessage(purpose); // e.g., "Sign this message to login: [1678886400000]"
+ * // const signature = "0x..."; // A valid signature for the message
+ * // const walletAddress = "0x..."; // The address that signed the message
+ * // const { isValid, error } = verifySignatureWithTimestamp(message, signature, walletAddress, 10); // 10 minutes max age
+ * // if (isValid) {
+ * //   console.log("Signature and timestamp are valid!");
+ * // } else {
+ * //   console.error("Timestamped signature verification failed:", error);
+ * // }
+ */
 
 /**
  * Verifies signature with timestamp validation to prevent replay attacks
