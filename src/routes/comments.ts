@@ -23,7 +23,7 @@ const commentsRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) => {
   }>('/poll/:pollId', {
     schema: {
       querystring: z.object({
-        limit: z.number().int().min(1).max(50).default(10).optional(),
+        limit: z.coerce.number().int().min(1).default(10).transform(value => Math.min(value, 50)),
         cursor: z.string().optional(),
       }),
     },
