@@ -77,17 +77,12 @@ async function notificationsRoutes(fastify: FastifyInstance, options: Notificati
     },
   }, async (request, reply) => {
     const { user, message, signedMessage, signature } = request.body as {
-      user?: string;
-      message?: string;
-      signedMessage?: string;
-      signature?: string;
+      user: string;
+      message: string;
+      signedMessage: string;
+      signature: string;
     };
 
-    // Basic validation for required fields (though schema handles most)
-    if (!user || !message || !signedMessage || !signature) {
-      reply.status(400);
-      return { error: 'User, message, signedMessage, and signature are required.' };
-    }
 
     // Validate Ethereum address format
     if (!isValidEthereumAddress(user)) {
