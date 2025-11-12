@@ -63,5 +63,11 @@ export async function build() {
     return reply.status(200).send({ status: "ok" });
   });
 
+  // Metrics route
+  server.get("/metrics", async (request, reply) => {
+    const snapshot = server.getMetricsSnapshot();
+    return snapshot;
+  });
+
   return server;
 }

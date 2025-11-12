@@ -1,17 +1,61 @@
 
 import type { FastifyPluginAsync } from 'fastify';
-import { Histogram } from 'hdr-histogram-js';
+import * as hdr from 'hdr-histogram-js';
+
+declare module 'fastify' {
+  interface FastifyInstance {
+    getMetricsSnapshot(): MetricsSnapshot;
+  }
+}
+
+interface MetricsSnapshot {
+  totalRequests: number;
+  p50: string;
+  p95: string;
+  simpleP50: string;
+  simpleP95: string;
+  windowSize: number;
+}
 
 const SLOW_REQUEST_THRESHOLD_MS = 500;
-const METRICS_WINDOW_SIZE = 1000; // Store last 1000 request durations for percentiles
+const METRICS_RESET_INTERVAL_MS = 3600 * 1000; // 1 hour
 
-const requestDurations: number[] = [];
 let totalRequests = 0;
+const histogram = hdr.build({ lowestDiscernibleValue: 1, highestTrackableValue: 60000, numberOfSignificantValueDigits: 3 }); // min, max, significant figures
+const metricsQueue: number[] = [];
+let processingQueue = false;
 
-// Initialize HDR Histogram
-const histogram = new Histogram(1, 60000, 3); // min, max, significant figures
+const processMetricsQueue = () => {
+  if (processingQueue) {
+    return;
+  }
+  processingQueue = true;
+  process.nextTick(() => {
+    while (metricsQueue.length > 0) {
+      const duration = metricsQueue.shift();
+      if (duration !== undefined) {
+        histogram.recordValue(duration);
+        totalRequests++;
+      }
+    }
+    processingQueue = false;
+  });
+};
 
 const requestTimingPlugin: FastifyPluginAsync = async (fastify) => {
+  // Schedule periodic reset of metrics
+  const resetInterval = setInterval(() => {
+    histogram.reset();
+    totalRequests = 0;
+    fastify.log.info('Request metrics reset.');
+  }, METRICS_RESET_INTERVAL_MS);
+
+  // Ensure interval is cleared on server close
+  fastify.addHook('onClose', (instance, done) => {
+    clearInterval(resetInterval);
+    done();
+  });
+
   fastify.decorateRequest('hrtime', null);
 
   fastify.addHook('onRequest', async (request, reply) => {
@@ -23,15 +67,8 @@ const requestTimingPlugin: FastifyPluginAsync = async (fastify) => {
     const end = process.hrtime.bigint();
     const duration = Number(end - start) / 1_000_000; // Convert nanoseconds to milliseconds
 
-    // Record duration for metrics
-    histogram.recordValue(duration);
-    totalRequests++;
-
-    // Keep a sliding window of durations for simple percentile calculation if HDR Histogram is not used for that
-    requestDurations.push(duration);
-    if (requestDurations.length > METRICS_WINDOW_SIZE) {
-      requestDurations.shift(); // Remove the oldest duration
-    }
+    metricsQueue.push(duration);
+    processMetricsQueue();
 
     const debugTiming = process.env.REQUEST_TIMING_DEBUG === 'true';
     if (debugTiming) {
@@ -55,30 +92,17 @@ const requestTimingPlugin: FastifyPluginAsync = async (fastify) => {
     return payload;
   });
 
-  // Function to calculate percentiles from a simple array (for p50, p95)
-  const calculateSimplePercentile = (durations: number[], percentile: number): number => {
-    if (durations.length === 0) {
-      return 0;
-    }
-    const sortedDurations = [...durations].sort((a, b) => a - b);
-    const index = Math.ceil(percentile / 100 * sortedDurations.length) - 1;
-    return sortedDurations[index] || 0;
-  };
-
-  // Expose a function to get metrics snapshot
-  fastify.decorate('getMetricsSnapshot', () => {
+  fastify.decorate('getMetricsSnapshot', (): MetricsSnapshot => {
     const p50 = histogram.getValueAtPercentile(50);
     const p95 = histogram.getValueAtPercentile(95);
-    const simpleP50 = calculateSimplePercentile(requestDurations, 50);
-    const simpleP95 = calculateSimplePercentile(requestDurations, 95);
 
     return {
       totalRequests,
       p50: p50.toFixed(2),
       p95: p95.toFixed(2),
-      simpleP50: simpleP50.toFixed(2), // For comparison/simplicity
-      simpleP95: simpleP95.toFixed(2), // For comparison/simplicity
-      windowSize: requestDurations.length,
+      simpleP50: 'N/A', // Removed simple percentile calculation
+      simpleP95: 'N/A', // Removed simple percentile calculation
+      windowSize: histogram.totalCount,
     };
   });
 };
