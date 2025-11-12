@@ -1,5 +1,6 @@
 import type { FastifyInstance, FastifyPluginAsync } from 'fastify';
 import type { FastifyRequest, FastifyReply } from 'fastify';
+import { z } from 'zod';
 
 // In-memory store for comments (replace with DB in production)
 export const comments: Array<{
@@ -16,10 +17,53 @@ import { ApiError, asyncHandler } from '../utils/errorHandler.js';
 const commentsRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) => {
   // Get comments for a poll
 
-  fastify.get('/poll/:pollId', async (request: FastifyRequest<{ Params: { pollId: string } }>, reply: FastifyReply) => {
+  fastify.get<{
+    Params: { pollId: string };
+    Querystring: { limit?: number; cursor?: string };
+  }>('/poll/:pollId', {
+    schema: {
+      querystring: z.object({
+        limit: z.number().int().min(1).max(50).default(10).optional(),
+        cursor: z.string().optional(),
+      }),
+    },
+  }, async (request, reply) => {
     const { pollId } = request.params;
-    const pollComments = comments.filter(c => c.pollId === pollId);
-    return { success: true, comments: pollComments };
+    const { limit = 10, cursor } = request.query;
+
+    let pollComments = comments.filter(c => c.pollId === pollId);
+
+    // Sort by createdAt descending for consistent pagination
+    pollComments.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+
+    let startIndex = 0;
+    if (cursor) {
+      const cursorIndex = pollComments.findIndex(c => c.id === cursor);
+      if (cursorIndex !== -1) {
+        startIndex = cursorIndex + 1;
+      } else {
+        // If cursor is invalid or not found, treat it as no cursor
+        startIndex = 0;
+      }
+    }
+
+    const paginatedComments = pollComments.slice(startIndex, startIndex + limit);
+
+    const nextCursor = paginatedComments.length === limit && (startIndex + limit) < pollComments.length
+      ? paginatedComments[paginatedComments.length - 1]?.id
+      : undefined;
+
+    const totalHint = pollComments.length;
+
+    return {
+      success: true,
+      comments: paginatedComments,
+      pagination: {
+        nextCursor,
+        limit,
+        totalHint,
+      },
+    };
   });
 
   // Post a new comment to a poll
