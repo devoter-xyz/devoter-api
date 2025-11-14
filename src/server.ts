@@ -15,6 +15,7 @@ import notificationsRoutes from "./routes/notifications.js";
 // import pollsRoutes from "./routes/polls.js";
 import registerRoutes from "./routes/register.js";
 import { authMiddleware } from "./middleware/auth.js";
+import { correlationIdMiddleware } from "./middleware/correlationId.js";
 import { prismaPlugin } from "./lib/prisma.js";
 
 config();
@@ -41,6 +42,7 @@ export async function build() {
   await server.register(prismaPlugin);
 
   // Register middleware
+  server.addHook("onRequest", correlationIdMiddleware);
   server.addHook("onRequest", authMiddleware);
 
   // Register rate limiting
