@@ -24,9 +24,11 @@
     "ethers": "^6.15.0",
     "fastify": "^5.6.1",
     "fastify-plugin": "^5.0.1",
+    "hdr-histogram-js": "^3.0.0",
     "prisma": "^6.14.0",
+    "uuid": "^13.0.0",
     "vitest": "^3.2.4",
-    "hdr-histogram-js": "^3.0.0"
+    "zod": "^4.1.12"
   },
   "devDependencies": {
     "@types/node": "^24.3.0",

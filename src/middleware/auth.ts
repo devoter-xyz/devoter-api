@@ -18,6 +18,13 @@ export async function verifyWalletSignature(
 ) {
   // Validate input structure and format
   if (!request.body || typeof request.body !== 'object') {
+    request.log.warn({
+      correlationId: request.correlationId,
+      operation: 'walletSignature.verify',
+      outcome: 'failure',
+      reason: 'Missing or invalid request body',
+      message: 'Wallet signature verification failed: Missing or invalid request body',
+    });
     throw ApiError.badRequest(
       "Missing or invalid request body",
       "INVALID_AUTH_INPUT"
@@ -25,6 +32,13 @@ export async function verifyWalletSignature(
   }
   const validation = validateWalletAuthInput(request.body);
   if (!validation.isValid) {
+    request.log.warn({
+      correlationId: request.correlationId,
+      operation: 'walletSignature.verify',
+      outcome: 'failure',
+      reason: validation.error || 'Invalid wallet authentication input',
+      message: 'Wallet signature verification failed: Invalid wallet authentication input',
+    });
     throw ApiError.badRequest(
       validation.error || "Invalid wallet authentication input",
       "INVALID_AUTH_INPUT"
@@ -38,6 +52,13 @@ export async function verifyWalletSignature(
     typeof message !== 'string' ||
     typeof signature !== 'string'
   ) {
+    request.log.warn({
+      correlationId: request.correlationId,
+      operation: 'walletSignature.verify',
+      outcome: 'failure',
+      reason: 'Invalid input types',
+      message: 'Wallet signature verification failed: Invalid input types',
+    });
     throw ApiError.badRequest(
       "walletAddress, message, and signature must be strings",
       "INVALID_AUTH_INPUT"
@@ -53,12 +74,27 @@ export async function verifyWalletSignature(
     MAX_SIGNATURE_AGE_MINUTES
   );
   if (!isValid) {
+    request.log.warn({
+      correlationId: request.correlationId,
+      operation: 'walletSignature.verify',
+      outcome: 'failure',
+      reason: error ? error : 'Invalid or expired wallet signature',
+      message: 'Wallet signature verification failed: Invalid or expired wallet signature',
+      walletAddress: walletAddress,
+    });
     throw ApiError.unauthorized(
       "Invalid or expired wallet signature",
       "INVALID_SIGNATURE",
       error ? { reason: error } : undefined
     );
   }
+  request.log.info({
+    correlationId: request.correlationId,
+    operation: 'walletSignature.verify',
+    outcome: 'success',
+    walletAddress: walletAddress,
+    message: 'Wallet signature verified successfully',
+  });
   // If all validation passes, continue
 }
 
@@ -71,6 +107,13 @@ export async function verifyWalletSignatureFromHeaders(
   const signature = request.headers["x-signature"] as string;
 
   if (!walletAddress || !message || !signature) {
+    request.log.warn({
+      correlationId: request.correlationId,
+      operation: 'walletSignatureFromHeaders.verify',
+      outcome: 'failure',
+      reason: 'Missing required headers',
+      message: 'Wallet signature verification from headers failed: Missing required headers',
+    });
     throw ApiError.badRequest(
       "Missing required headers: x-wallet-address, x-message, x-signature",
       "MISSING_AUTH_HEADERS"
@@ -82,6 +125,13 @@ export async function verifyWalletSignatureFromHeaders(
 
   const validation = validateWalletAuthInput(tempBody);
   if (!validation.isValid) {
+    request.log.warn({
+      correlationId: request.correlationId,
+      operation: 'walletSignatureFromHeaders.verify',
+      outcome: 'failure',
+      reason: validation.error || 'Invalid wallet authentication input in headers',
+      message: 'Wallet signature verification from headers failed: Invalid wallet authentication input',
+    });
     throw ApiError.badRequest(
       validation.error || "Invalid wallet authentication input in headers",
       "INVALID_AUTH_INPUT"
@@ -96,12 +146,27 @@ export async function verifyWalletSignatureFromHeaders(
     MAX_SIGNATURE_AGE_MINUTES
   );
   if (!isValid) {
+    request.log.warn({
+      correlationId: request.correlationId,
+      operation: 'walletSignatureFromHeaders.verify',
+      outcome: 'failure',
+      reason: error ? error : 'Invalid or expired wallet signature from headers',
+      message: 'Wallet signature verification from headers failed: Invalid or expired wallet signature',
+      walletAddress: walletAddress,
+    });
     throw ApiError.unauthorized(
       "Invalid or expired wallet signature from headers",
       "INVALID_SIGNATURE",
       error ? { reason: error } : undefined
     );
   }
+  request.log.info({
+    correlationId: request.correlationId,
+    operation: 'walletSignatureFromHeaders.verify',
+    outcome: 'success',
+    walletAddress: walletAddress,
+    message: 'Wallet signature from headers verified successfully',
+  });
   // If all validation passes, continue
 }
 
@@ -149,6 +214,13 @@ export async function verifyApiKey(
 
   // 1. Defensive check for missing Authorization header
   if (!authHeader) {
+    request.log.warn({
+      correlationId: request.correlationId,
+      operation: 'apiKey.verify',
+      outcome: 'failure',
+      reason: 'Missing Authorization header',
+      message: 'API key verification failed: Missing Authorization header',
+    });
     throw ApiError.unauthorized(
       "Authorization header missing",
       "MISSING_AUTH_HEADER"
@@ -158,6 +230,13 @@ export async function verifyApiKey(
   // 2. Extract token using helper function
   const token = extractBearerToken(authHeader);
   if (!token) {
+    request.log.warn({
+      correlationId: request.correlationId,
+      operation: 'apiKey.verify',
+      outcome: 'failure',
+      reason: 'Malformed Authorization header',
+      message: 'API key verification failed: Malformed Authorization header',
+    });
     throw ApiError.unauthorized(
       "Malformed Authorization header. Expected Bearer token.",
       "MALFORMED_AUTH_HEADER"
@@ -175,11 +254,24 @@ export async function verifyApiKey(
     } else {
       normalizedToken = token.replace(/_/g, '.');
     }
-    request.log.warn('Legacy API key format detected and normalized during authentication.');
+    request.log.warn({
+      correlationId: request.correlationId,
+      operation: 'apiKey.verify',
+      outcome: 'warning',
+      reason: 'Legacy API key format',
+      message: 'Legacy API key format detected and normalized during authentication.',
+    });
   }
 
   // 3. Validate API key format using helper function (now with the normalized token)
   if (!isValidApiKeyFormat(normalizedToken)) {
+    request.log.warn({
+      correlationId: request.correlationId,
+      operation: 'apiKey.verify',
+      outcome: 'failure',
+      reason: 'Invalid API key format',
+      message: 'API key verification failed: Invalid API key format',
+    });
     throw ApiError.unauthorized(
       "Invalid API key format",
       "INVALID_API_KEY_FORMAT"
@@ -202,6 +294,13 @@ export async function verifyApiKey(
 
   // 6. Validate if API key exists and is active
   if (!apiKeyRecord || !apiKeyRecord.apiUser) {
+    request.log.warn({
+      correlationId: request.correlationId,
+      operation: 'apiKey.verify',
+      outcome: 'failure',
+      reason: 'Invalid or inactive API key',
+      message: 'API key verification failed: Invalid or inactive API key',
+    });
     throw ApiError.unauthorized(
       "Invalid or inactive API key",
       "INVALID_API_KEY"
@@ -213,6 +312,15 @@ export async function verifyApiKey(
     apiUserId: apiKeyRecord.userId,
     apiKeyId: apiKeyRecord.id,
   };
+
+  request.log.info({
+    correlationId: request.correlationId,
+    operation: 'apiKey.verify',
+    outcome: 'success',
+    apiUserId: apiKeyRecord.userId,
+    apiKeyId: apiKeyRecord.id,
+    message: 'API key verified successfully',
+  });
 
   // If all checks pass, the request can proceed
 }
