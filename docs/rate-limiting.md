@@ -141,6 +141,56 @@ Rate limit violations are logged for monitoring purposes. In production, conside
 - Analyzing patterns to adjust limits if needed
 - Implementing IP-based temporary bans for persistent abuse
 
+## Rate Limit Analytics
+
+To provide better visibility into rate limit usage and violations, a new analytics endpoint has been introduced:
+
+### `/metrics/rate-limits` Endpoint
+
+This endpoint exposes aggregated rate limit data, useful for monitoring dashboards and identifying potential abuse patterns. It provides a JSON response with the following structure:
+
+```json
+{
+  "timestamp": 1701000000000,
+  "totalEvents": 1500,
+  "limitedEvents": 50,
+  "limitedPercentage": 3.33,
+  "hitsByEndpoint": {
+    "/api/v1/register": 30,
+    "/api/v1/api-keys": 15,
+    "/health": 5
+  },
+  "hitsByLimitType": {
+    "registration": 30,
+    "apiKeyCreation": 15,
+    "health": 5
+  },
+  "topViolators": [
+    { "key": "192.168.1.100:0xabc...", "count": 25 },
+    { "key": "10.0.0.5", "count": 10 }
+  ]
+}
+```
+
+**Key Metrics Included:**
+- `timestamp`: Time of data generation.
+- `totalEvents`: Total rate limit checks performed.
+- `limitedEvents`: Total requests that were rate-limited.
+- `limitedPercentage`: Percentage of requests that were rate-limited.
+- `hitsByEndpoint`: Breakdown of rate limit hits by API endpoint.
+- `hitsByLimitType`: Breakdown of rate limit hits by configured limit type (e.g., `general`, `auth`).
+- `topViolators`: A list of the top 10 keys (IPs or IP+wallet combinations) that have exceeded rate limits, along with their hit counts.
+
+This data is stored in-memory and is primarily intended for real-time monitoring and quick insights. For persistent storage and advanced analytics, integrate with external monitoring solutions.
+
+### Example Usage:
+
+To retrieve the current rate limit analytics:
+
+```bash
+curl http://localhost:3000/metrics/rate-limits
+```
+
 ## Production Considerations
 
 For production deployment:
