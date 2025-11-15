@@ -1,7 +1,27 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import Fastify, { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import commentsRoutes, { comments } from '../../src/routes/comments';
+import commentsRoutes from '../../src/routes/comments';
 import errorPlugin from '../../src/plugins/errorPlugin';
+import { asyncHandler } from '~/utils/errorHandler.js'; // Import asyncHandler
+
+const mockComments: any[] = []; // Declare mockComments here
+
+// Mock the comments array and asyncHandler
+vi.mock('../../src/routes/comments', async (importOriginal) => {
+  const originalModule = await importOriginal();
+  return {
+    ...originalModule,
+    comments: mockComments,
+  };
+});
+
+vi.mock('~/utils/errorHandler.js', async (importOriginal) => {
+  const originalModule = await importOriginal();
+  return {
+    ...originalModule,
+    asyncHandler: vi.fn((fn) => fn), // Mock asyncHandler to just return the function
+  };
+});
 
 // Helper to create a mock Fastify instance and register the plugin
 async function setupFastify() {
@@ -19,7 +39,7 @@ describe('Comments Routes', () => {
 
   beforeEach(async () => {
     // Reset the comments array before each test
-    comments.length = 0; // Clear the array
+    mockComments.length = 0; // Clear the array
     fastify = await setupFastify();
   });
 

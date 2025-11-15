@@ -19,17 +19,10 @@ import { prisma } from "../lib/prisma.js";
 import { validateScopes, ALL_SCOPES } from "../utils/permissions.js";
 
 export default async function apiKeysRoute(fastify: FastifyInstance) {
+  
   // POST /api-keys - Create a new API key
   fastify.post("/api-keys", {
     schema: {
-      definitions: {
-        CreateApiKeyRequestBody: Type.Object({
-          walletAddress: Type.String({ pattern: '^0x[a-fA-F0-9]{40}$' }),
-          message: Type.String({ minLength: 1, maxLength: 1000 }),
-          signature: Type.String({ pattern: '^0x[a-fA-F0-9]{130}$' }),
-          scopes: Type.Optional(Type.Array(Type.String({ enum: ALL_SCOPES }))),
-        }),
-      },
       body: Type.Object({
         walletAddress: Type.String({ pattern: '^0x[a-fA-F0-9]{40}$' }),
         message: Type.String({ minLength: 1, maxLength: 1000 }),
@@ -65,12 +58,6 @@ export default async function apiKeysRoute(fastify: FastifyInstance) {
     },
     preHandler: verifyWalletSignature,
           handler: asyncHandler(async (request, reply) => {
-            type CreateApiKeyRequestBody = Static<typeof Type.Object({
-              walletAddress: Type.String({ pattern: '^0x[a-fA-F0-9]{40}$' }),
-              message: Type.String({ minLength: 1, maxLength: 1000 }),
-              signature: Type.String({ pattern: '^0x[a-fA-F0-9]{130}$' }),
-              scopes: Type.Optional(Type.Array(Type.String({ enum: ALL_SCOPES }))),
-            })>;
             const { walletAddress, scopes: rawScopes } = request.body as CreateApiKeyRequestBody;
       const scopes = rawScopes ? validateScopes(rawScopes) : [];
 

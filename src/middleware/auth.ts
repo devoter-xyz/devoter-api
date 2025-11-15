@@ -292,12 +292,6 @@ export async function verifyApiKey(
     include: {
       apiUser: true, // Include the associated user
     },
-    select: {
-      id: true,
-      userId: true,
-      scopes: true,
-      apiUser: true,
-    },
   });
 
   // 6. Validate if API key exists and is active
