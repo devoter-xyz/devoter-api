@@ -6,6 +6,7 @@ export interface ApiKeyData {
   key: string;
   createdAt: number;
   algorithm: ApiKeyFormat;
+  scopes?: string[];
 }
 
 /**
@@ -47,12 +48,12 @@ export function generateApiKey(
  * @param prefix - Prefix for the API key (default: 'dv')
  * @returns Formatted API key with prefix
  */
-export function generateUniqueApiKey(userId: string, prefix: string = 'dv', createdAt?: number): ApiKeyData {
+export function generateUniqueApiKey(userId: string, prefix: string = 'dv', createdAt?: number, scopes?: string[]): ApiKeyData {
   const effectiveCreatedAt = createdAt || Date.now();
   const { key: randomPart, algorithm } = generateApiKey(24); // 24 bytes = 32 chars in base64url
   const timestamp = effectiveCreatedAt.toString(36); // Compact timestamp
   const formattedKey = `${prefix}.${timestamp}.${randomPart}`;
-  return { key: formattedKey, createdAt: effectiveCreatedAt, algorithm };
+  return { key: formattedKey, createdAt: effectiveCreatedAt, algorithm, scopes };
 }
 
 /**
