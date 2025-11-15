@@ -5,6 +5,7 @@ import { ApiError } from "../utils/errorHandler.js";
 import { extractBearerToken } from "../utils/auth.js";
 import { hashApiKey, isValidApiKeyFormat } from "../utils/generateApiKey.js";
 import { prisma } from "../lib/prisma.js";
+import { hasPermission } from "../utils/permissions.js";
 
 /**
  * Extracts a Bearer token from the Authorization header.
@@ -192,6 +193,7 @@ declare module 'fastify' {
     user?: {
       apiUserId: string;
       apiKeyId: string;
+      scopes: string[];
     };
   }
 }
@@ -311,6 +313,7 @@ export async function verifyApiKey(
   request.user = {
     apiUserId: apiKeyRecord.userId,
     apiKeyId: apiKeyRecord.id,
+    scopes: apiKeyRecord.scopes || [],
   };
 
   request.log.info({
@@ -319,8 +322,60 @@ export async function verifyApiKey(
     outcome: 'success',
     apiUserId: apiKeyRecord.userId,
     apiKeyId: apiKeyRecord.id,
+    scopes: apiKeyRecord.scopes || [],
     message: 'API key verified successfully',
   });
 
   // If all checks pass, the request can proceed
+}
+
+/**
+ * Middleware to enforce permission-based access control for API keys.
+ * Checks if the authenticated API key has all the required scopes for the route.
+ * @param requiredScopes An array of scopes that are required to access the route.
+ */
+export function enforcePermissions(requiredScopes: string[]) {
+  return async (request: FastifyRequest, reply: FastifyReply) => {
+    if (!request.user || !request.user.scopes) {
+      request.log.warn({
+        correlationId: request.correlationId,
+        operation: 'permission.enforce',
+        outcome: 'failure',
+        reason: 'API key not authenticated or scopes missing',
+        message: 'Permission enforcement failed: API key not authenticated or scopes missing',
+      });
+      throw ApiError.unauthorized(
+        "API key not authenticated or scopes missing",
+        "UNAUTHENTICATED_OR_MISSING_SCOPES"
+      );
+    }
+
+    if (!hasPermission(requiredScopes, request.user.scopes)) {
+      request.log.warn({
+        correlationId: request.correlationId,
+        operation: 'permission.enforce',
+        outcome: 'failure',
+        reason: 'Insufficient permissions',
+        message: 'Permission enforcement failed: Insufficient permissions',
+        requiredScopes: requiredScopes,
+        userScopes: request.user.scopes,
+      });
+      throw ApiError.forbidden(
+        "Insufficient permissions",
+        "INSUFFICIENT_PERMISSIONS",
+        { required: requiredScopes, actual: request.user.scopes }
+      );
+    }
+
+    request.log.info({
+      correlationId: request.correlationId,
+      operation: 'permission.enforce',
+      outcome: 'success',
+      apiUserId: request.user.apiUserId,
+      apiKeyId: request.user.apiKeyId,
+      requiredScopes: requiredScopes,
+      userScopes: request.user.scopes,
+      message: 'Permissions checked successfully',
+    });
+  };
 }

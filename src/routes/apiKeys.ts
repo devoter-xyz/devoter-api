@@ -3,6 +3,7 @@ import { ApiUser } from '@prisma/client';
 import { verifyWalletSignature, verifyWalletSignatureFromHeaders } from "../middleware/auth.js";
 import { rateLimitConfigs } from "../middleware/rateLimit.js";
 import * as Type from "@sinclair/typebox";
+import { Static } from "@sinclair/typebox/type";
 import {
   generateUniqueApiKey,
   hashApiKey,
@@ -15,8 +16,10 @@ import {
   HttpStatusCode,
 } from "../utils/errorHandler.js";
 import { prisma } from "../lib/prisma.js";
+import { validateScopes, ALL_SCOPES } from "../utils/permissions.js";
 
 export default async function apiKeysRoute(fastify: FastifyInstance) {
+  
   // POST /api-keys - Create a new API key
   fastify.post("/api-keys", {
     schema: {
@@ -24,6 +27,7 @@ export default async function apiKeysRoute(fastify: FastifyInstance) {
         walletAddress: Type.String({ pattern: '^0x[a-fA-F0-9]{40}$' }),
         message: Type.String({ minLength: 1, maxLength: 1000 }),
         signature: Type.String({ pattern: '^0x[a-fA-F0-9]{130}$' }),
+        scopes: Type.Optional(Type.Array(Type.String({ enum: ALL_SCOPES }))),
       }),
       response: {
         201: Type.Object({
@@ -33,6 +37,7 @@ export default async function apiKeysRoute(fastify: FastifyInstance) {
           message: Type.String(),
           createdAt: Type.Number(),
           algorithm: Type.String(),
+          scopes: Type.Optional(Type.Array(Type.String())),
         }),
         400: Type.Object({
           success: Type.Literal(false),
@@ -52,12 +57,9 @@ export default async function apiKeysRoute(fastify: FastifyInstance) {
       rateLimit: rateLimitConfigs.apiKeyCreation,
     },
     preHandler: verifyWalletSignature,
-    handler: asyncHandler(async (request, reply) => {
-      const { walletAddress } = request.body as {
-        walletAddress: string;
-        message: string;
-        signature: string;
-      };
+          handler: asyncHandler(async (request, reply) => {
+            const { walletAddress, scopes: rawScopes } = request.body as CreateApiKeyRequestBody;
+      const scopes = rawScopes ? validateScopes(rawScopes) : [];
 
       // Find the user
       const user = await prisma.apiUser.findUnique({
@@ -88,7 +90,7 @@ export default async function apiKeysRoute(fastify: FastifyInstance) {
       }
 
       // Generate new API key
-      const { key: newApiKey, createdAt, algorithm } = generateUniqueApiKey(user.id);
+      const { key: newApiKey, createdAt, algorithm } = generateUniqueApiKey(user.id, 'dv', undefined, scopes);
       const hashedKey = hashApiKey(newApiKey);
 
       // Store the API key in database
@@ -100,6 +102,7 @@ export default async function apiKeysRoute(fastify: FastifyInstance) {
           enabled: true,
           createdAt: new Date(createdAt),
           algorithm: algorithm,
+          scopes: scopes,
         },
       });
 
@@ -108,6 +111,7 @@ export default async function apiKeysRoute(fastify: FastifyInstance) {
         keyId: createdApiKey.id,
         createdAt: createdAt,
         algorithm: algorithm,
+        scopes: scopes,
         correlationId: request.correlationId,
         operation: 'apiKey.create',
         outcome: 'success',
@@ -121,6 +125,7 @@ export default async function apiKeysRoute(fastify: FastifyInstance) {
         message: "API key created successfully",
         createdAt: createdAt,
         algorithm: algorithm,
+        scopes: scopes,
       });
     }),
   });
@@ -146,6 +151,7 @@ export default async function apiKeysRoute(fastify: FastifyInstance) {
               createdAt: Type.String(),
               totalUsed: Type.Optional(Type.Number()),
               enabled: Type.Boolean(),
+              scopes: Type.Optional(Type.Array(Type.String())),
             })
           ),
         }),
@@ -210,6 +216,7 @@ export default async function apiKeysRoute(fastify: FastifyInstance) {
         createdAt: string;
         totalUsed?: number;
         enabled: boolean;
+        scopes?: string[];
       }
 
       const apiKeys: ApiKeyResponse[] = user.apiKeys.map((key: any) => {
@@ -218,6 +225,7 @@ export default async function apiKeysRoute(fastify: FastifyInstance) {
           key: maskApiKey(key.key),
           createdAt: key.createdAt.toISOString(),
           enabled: key.enabled,
+          scopes: key.scopes || [],
         };
         if (key.totalUsed !== undefined) {
           apiKeyObj.totalUsed = key.totalUsed;
@@ -250,6 +258,7 @@ export default async function apiKeysRoute(fastify: FastifyInstance) {
             Type.Object({
               id: Type.String(),
               createdAt: Type.String(),
+              scopes: Type.Optional(Type.Array(Type.String())),
             })
           ),
         }),
@@ -281,6 +290,7 @@ export default async function apiKeysRoute(fastify: FastifyInstance) {
             select: {
               id: true,
               createdAt: true,
+              scopes: true,
             },
             orderBy: {
               createdAt: "desc",
@@ -313,11 +323,13 @@ export default async function apiKeysRoute(fastify: FastifyInstance) {
       interface ApiKeyMetadata {
         id: string;
         createdAt: Date;
+        scopes?: string[];
       }
 
       const apiKeysMetadata = user.apiKeys.map((key: ApiKeyMetadata) => ({
         id: key.id,
         createdAt: key.createdAt.toISOString(),
+        scopes: key.scopes || [],
       }));
 
       return reply.status(HttpStatusCode.OK).send({
@@ -349,6 +361,7 @@ export default async function apiKeysRoute(fastify: FastifyInstance) {
           createdAt: Type.Number(),
           algorithm: Type.String(),
           message: Type.String(),
+          scopes: Type.Optional(Type.Array(Type.String())),
         }),
         400: Type.Object({
           success: Type.Literal(false),
@@ -414,7 +427,7 @@ export default async function apiKeysRoute(fastify: FastifyInstance) {
 
       // Generate a new API key and a single timestamp for both key and metadata
       const createdAtTimestamp = Date.now();
-      const { key: newApiKey, createdAt, algorithm } = generateUniqueApiKey(user.id, 'dv', createdAtTimestamp);
+      const { key: newApiKey, createdAt, algorithm, scopes } = generateUniqueApiKey(user.id, 'dv', createdAtTimestamp, existingApiKey.scopes || []);
       const hashedKey = hashApiKey(newApiKey);
 
       // Perform revocation and creation in a single transaction
@@ -437,6 +450,7 @@ export default async function apiKeysRoute(fastify: FastifyInstance) {
             enabled: true,
             createdAt: new Date(createdAt), // Use the createdAt from generateUniqueApiKey
             algorithm: algorithm,
+            scopes: scopes,
           },
         });
         return [updatedKey, newKey];
@@ -448,6 +462,7 @@ export default async function apiKeysRoute(fastify: FastifyInstance) {
         newKeyId: createdApiKey.id,
         createdAt: createdAt,
         algorithm: algorithm,
+        scopes: scopes,
         correlationId: request.correlationId,
         operation: 'apiKey.rotate',
         outcome: 'success',
@@ -461,6 +476,7 @@ export default async function apiKeysRoute(fastify: FastifyInstance) {
         createdAt: createdAt,
         algorithm: algorithm,
         message: "API key rotated successfully",
+        scopes: scopes,
       });
     }),
   });

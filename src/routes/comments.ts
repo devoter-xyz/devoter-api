@@ -1,18 +1,6 @@
 import type { FastifyInstance, FastifyPluginAsync } from 'fastify';
 import type { FastifyRequest, FastifyReply } from 'fastify';
-import { z } from 'zod';
-
-// In-memory store for comments (replace with DB in production)
-export const comments: Array<{
-  id: string;
-  pollId: string;
-  user: string;
-  comment: string;
-  createdAt: Date;
-}> = [];
-
-import { validateCommentInput } from '../utils/validation.js';
-import { ApiError, asyncHandler } from '../utils/errorHandler.js';
+import * as Type from "@sinclair/typebox";
 
 const commentsRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) => {
   // Get comments for a poll
@@ -22,9 +10,9 @@ const commentsRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) => {
     Querystring: { limit?: number; cursor?: string };
   }>('/poll/:pollId', {
     schema: {
-      querystring: z.object({
-        limit: z.coerce.number().int().min(1).default(10).transform(value => Math.min(value, 50)),
-        cursor: z.string().optional(),
+      querystring: Type.Object({
+        limit: Type.Optional(Type.Integer({ minimum: 1, default: 10 })),
+        cursor: Type.Optional(Type.String()),
       }),
     },
   }, async (request, reply) => {

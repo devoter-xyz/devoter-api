@@ -6,6 +6,8 @@ import { PrismaClient } from '@prisma/client';
 // Mock Prisma
 vi.mock('@prisma/client', () => ({
   PrismaClient: vi.fn().mockImplementation(() => ({
+    $connect: vi.fn().mockResolvedValue(undefined),
+    $transaction: vi.fn(), // Add mock for $transaction
     apiUser: {
       findUnique: vi.fn(),
     },
@@ -13,9 +15,10 @@ vi.mock('@prisma/client', () => ({
       create: vi.fn(),
       findMany: vi.fn(),
       findUnique: vi.fn(),
+      update: vi.fn(), // Add mock for poll.update
     },
     vote: {
-      findUnique: vi.fn(),
+      findFirst: vi.fn(), // Change findUnique to findFirst
       create: vi.fn(),
       groupBy: vi.fn(),
     },

@@ -1,6 +1,26 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import Fastify from 'fastify';
-import commentsRoute, { comments } from '~/routes/comments.js';
+import commentsRoute from '~/routes/comments.js';
+import { asyncHandler } from '~/utils/errorHandler.js'; // Import asyncHandler
+
+const mockComments: any[] = []; // Declare mockComments here
+
+// Mock the comments array and asyncHandler
+vi.mock('~/routes/comments.js', async (importOriginal) => {
+  const originalModule = await importOriginal();
+  return {
+    ...originalModule,
+    comments: mockComments,
+  };
+});
+
+vi.mock('~/utils/errorHandler.js', async (importOriginal) => {
+  const originalModule = await importOriginal();
+  return {
+    ...originalModule,
+    asyncHandler: vi.fn((fn) => fn), // Mock asyncHandler to just return the function
+  };
+});
 
 describe('Comments Route Pagination', () => {
   let app: Fastify.FastifyInstance;
@@ -12,9 +32,9 @@ describe('Comments Route Pagination', () => {
     await app.register(commentsRoute);
 
     // Clear comments and populate with test data
-    comments.length = 0; // Clear the array
+    mockComments.length = 0; // Clear the array
     for (let i = 0; i < 25; i++) {
-      comments.push({
+      mockComments.push({
         id: `comment-${i < 10 ? '0' : ''}${i}`,
         pollId: pollId,
         user: `user-${i}`,
@@ -23,7 +43,7 @@ describe('Comments Route Pagination', () => {
       });
     }
     // Add some comments for another poll
-    comments.push({
+    mockComments.push({
       id: 'comment-other-0',
       pollId: otherPollId,
       user: 'user-other',

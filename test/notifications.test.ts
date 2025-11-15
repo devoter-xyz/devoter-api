@@ -41,6 +41,10 @@ describe('Notifications Route', () => {
       });
     }
 
+    vi.mock('~/utils/verifySignature.js', () => ({
+      verifySignatureWithTimestamp: vi.fn(),
+    }));
+
     vi.clearAllMocks();
   });
 
@@ -158,8 +162,8 @@ describe('Notifications Route', () => {
 
   describe('POST /notifications', () => {
     it('should prevent replay attacks by rejecting duplicate signatures', async () => {
-      const { verifySignatureWithTimestamp } = await import('~/utils/verifySignature.js');
-      const verifySignatureSpy = vi.spyOn(verifySignatureWithTimestamp, 'verifySignatureWithTimestamp');
+      const verifySignatureModule = await import('~/utils/verifySignature.js');
+      const verifySignatureSpy = vi.spyOn(verifySignatureModule, 'verifySignatureWithTimestamp');
       verifySignatureSpy.mockReturnValue({ isValid: true, error: null });
 
       const user = '0x1234567890abcdef';
