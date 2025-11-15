@@ -111,7 +111,7 @@ export const rateLimitKeyGenerator = (request: FastifyRequest) => {
  * Register rate limiting plugin with different configurations
  */
 export async function registerRateLimiting(fastify: FastifyInstance) {
-  await fastify.register((await import('@fastify/rate-limit')).default, {
+  await fastify.register((await import('@fastify/rate-limit')), {
     global: false,
     errorResponseBuilder: rateLimitErrorHandler,
     keyGenerator: rateLimitKeyGenerator,
@@ -126,14 +126,7 @@ export async function registerRateLimiting(fastify: FastifyInstance) {
       'x-ratelimit-reset': true,
     },
     onExceeding: (request: FastifyRequest, key: string) => {
-      // Attempt to infer limitType from the route path or default to 'general'
-      let limitType = 'general'; // Default to general if not specifically matched
-      if (request.routeOptions.url) {
-        if (request.routeOptions.url.includes('/auth')) limitType = 'auth';
-        else if (request.routeOptions.url.includes('/api-keys')) limitType = 'apiKeyCreation';
-        else if (request.routeOptions.url.includes('/register')) limitType = 'registration';
-        else if (request.routeOptions.url.includes('/health')) limitType = 'health';
-      }
+      const limitType = (request.routeOptions.config as { rateLimitType?: string })?.rateLimitType || 'general';
 
       recordRateLimitEvent({
         timestamp: Date.now(),
