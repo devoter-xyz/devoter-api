@@ -25,7 +25,7 @@ const errorPlugin: FastifyPluginAsync = async (fastify: FastifyInstance) => {
   // Register a global error handler for all uncaught errors in Fastify routes and hooks.
   // This ensures consistent error responses and logging.
   fastify.setErrorHandler((error, request, reply) => {
-    handleError(error, request, reply);
+    handleError(error as Error, request, reply);
   });
 };
 

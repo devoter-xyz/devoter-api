@@ -14,6 +14,7 @@ import commentsRoutes from "./routes/comments.js";
 import notificationsRoutes from "./routes/notifications.js";
 // import pollsRoutes from "./routes/polls.js";
 import registerRoutes from "./routes/register.js";
+import rateLimitMetricsRoutes from "./routes/rateLimitMetrics.js";
 import { authMiddleware } from "./middleware/auth.js";
 import { correlationIdMiddleware } from "./middleware/correlationId.js";
 import { prismaPlugin } from "./lib/prisma.js";
@@ -48,7 +49,7 @@ export async function build() {
   // Register rate limiting
   await registerRateLimiting(server);
   server.setErrorHandler((error, request, reply) => {
-    if (error.statusCode === 429) {
+    if ((error as any).statusCode === 429) {
       return reply.status(429).send(rateLimitErrorHandler(request, error));
     }
     reply.send(error);
@@ -70,6 +71,8 @@ export async function build() {
     const snapshot = server.getMetricsSnapshot();
     return snapshot;
   });
+
+  server.register(rateLimitMetricsRoutes, { prefix: "/metrics" });
 
   return server;
 }

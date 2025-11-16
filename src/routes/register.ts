@@ -81,7 +81,7 @@ export default async function registerRoute(fastify: FastifyInstance) {
       rateLimit: rateLimitConfigs.registration,
     },
     preHandler: verifyWalletSignature,
-    handler: asyncHandler(async (request, reply) => {
+    handler: asyncHandler<RegisterRoute>(async (request, reply) => {
 
 
       if ('email' in request.body || 'password' in request.body) {

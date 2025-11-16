@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyPluginOptions } from 'fastify';
-import { verifySignatureWithTimestamp, isValidEthereumAddress } from '../utils/verifySignature';
-import { replayProtectionCache } from '../lib/replayProtectionCache';
+import { verifySignature, verifySignatureWithTimestamp, isValidEthereumAddress } from '../utils/verifySignature.js';
+import { replayProtectionCache } from '../lib/replayProtectionCache.js';
 
 const REPLAY_PROTECTION_TTL = 330; // 5.5 minutes, slightly longer than typical 5-minute timestamp window
 
