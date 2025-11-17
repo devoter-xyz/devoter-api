@@ -17,11 +17,45 @@ import registerRoutes from "./routes/register.js";
 import rateLimitMetricsRoutes from "./routes/rateLimitMetrics.js";
 import { authMiddleware } from "./middleware/auth.js";
 import { correlationIdMiddleware } from "./middleware/correlationId.js";
-import { prismaPlugin } from "./lib/prisma.js";
+import { prismaPlugin, prisma } from "./lib/prisma.js";
+import { getRateLimitAnalytics } from "./lib/rateLimitAnalytics.js";
 
 config();
 
+
+async function checkDatabaseConnection() {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    return { status: "ok" };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    if (process.env.NODE_ENV !== "production") {
+      console.error("Database connection error:", errorMessage);
+    }
+    return { status: "error", error: "database unavailable" };
+  }
+}
+
+
+
+function getMemoryUsage() {
+  const usage = process.memoryUsage();
+  return {
+    rss: `${(usage.rss / 1024 / 1024).toFixed(2)} MB`, // Resident Set Size
+    heapTotal: `${(usage.heapTotal / 1024 / 1024).toFixed(2)} MB`, // Total size of the allocated heap
+    heapUsed: `${(usage.heapUsed / 1024 / 1024).toFixed(2)} MB`, // Actual memory used during the execution
+    external: `${(usage.external / 1024 / 1024).toFixed(2)} MB`, // Memory used by C++ objects bound to JavaScript objects
+  };
+}
+
+function getRequestQueueDepth() {
+  // Fastify does not directly expose a request queue depth.
+  // This would require custom instrumentation if needed.
+  return { depth: 0, note: "Fastify does not expose direct request queue depth." };
+}
+
 export async function build() {
+
   const server = fastify({
     logger: {
       level: process.env.NODE_ENV === "production" ? "info" : "debug",
@@ -61,9 +95,57 @@ export async function build() {
   // server.register(pollsRoutes, { prefix: "/api/v1/polls" });
   server.register(registerRoutes, { prefix: "/api/v1/register" });
 
-  // Health check route
+  // Health check route (liveness probe)
   server.get("/health", async (request, reply) => {
-    return reply.status(200).send({ status: "ok" });
+    return reply.status(200).send({ status: "ok", uptime: process.uptime() });
+  });
+
+  // Liveness probe
+  server.get("/health/live", async (request, reply) => {
+    return reply.status(200).send({ status: "ok", uptime: process.uptime() });
+  });
+
+  // Readiness probe
+  server.get("/health/ready", async (request, reply) => {
+    const dbStatus = await checkDatabaseConnection();
+    const isReady = dbStatus.status === "ok";
+
+    if (isReady) {
+      return reply.status(200).send({ status: "ok", database: dbStatus });
+    } else {
+      reply.status(503).send({
+        status: "service unavailable",
+        database: dbStatus,
+        message: "Database connection failed.",
+      });
+    }
+  });
+
+  // Detailed health check (requires authentication)
+  server.get("/health/detailed", { onRequest: [authMiddleware] }, async (request, reply) => {
+    const dbStatus = await checkDatabaseConnection();
+    const memoryUsage = getMemoryUsage();
+    const rateLimit = getRateLimitAnalytics();
+
+    const isHealthy = dbStatus.status === "ok";
+
+    if (isHealthy) {
+      return reply.status(200).send({
+        status: "ok",
+        database: dbStatus,
+        memoryUsage,
+        rateLimit,
+        uptime: process.uptime(),
+      });
+    } else {
+      reply.status(503).send({
+        status: "service unavailable",
+        database: dbStatus,
+        memoryUsage,
+        rateLimit,
+        message: "One or more services are unhealthy.",
+      });
+    }
   });
 
   // Metrics route
