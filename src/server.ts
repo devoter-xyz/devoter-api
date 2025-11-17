@@ -32,17 +32,7 @@ async function checkDatabaseConnection() {
   }
 }
 
-async function getPrismaConnectionPoolStatus() {
-  // Prisma doesn't expose connection pool metrics directly.
-  // This is a placeholder for future implementation if Prisma exposes such metrics.
-  return {
-    totalOpen: -1, // Placeholder
-    inUse: -1, // Placeholder
-    waiting: -1, // Placeholder
-    status: "unknown",
-    note: "Prisma does not expose direct connection pool metrics.",
-  };
-}
+
 
 function getMemoryUsage() {
   const usage = process.memoryUsage();
@@ -130,9 +120,7 @@ export async function build() {
   // Detailed health check (requires authentication)
   server.get("/health/detailed", { onRequest: [authMiddleware] }, async (request, reply) => {
     const dbStatus = await checkDatabaseConnection();
-    const prismaPoolStatus = await getPrismaConnectionPoolStatus();
     const memoryUsage = getMemoryUsage();
-    const requestQueue = getRequestQueueDepth();
     const rateLimit = getRateLimitStatus();
 
     const isHealthy = dbStatus.status === "ok";
@@ -141,9 +129,7 @@ export async function build() {
       return reply.status(200).send({
         status: "ok",
         database: dbStatus,
-        prismaConnectionPool: prismaPoolStatus,
         memoryUsage,
-        requestQueue,
         rateLimit,
         uptime: process.uptime(),
       });
@@ -151,9 +137,7 @@ export async function build() {
       reply.status(503).send({
         status: "service unavailable",
         database: dbStatus,
-        prismaConnectionPool: prismaPoolStatus,
         memoryUsage,
-        requestQueue,
         rateLimit,
         message: "One or more services are unhealthy.",
       });

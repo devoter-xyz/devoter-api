@@ -176,6 +176,10 @@ export async function authMiddleware(
   request: FastifyRequest,
   reply: FastifyReply
 ) {
+  const publicHealthPaths = ['/health', '/health/live', '/health/ready'];
+  if (publicHealthPaths.includes(request.url)) {
+    return; // Skip authentication for public health endpoints
+  }
   if (request.headers.authorization) {
     await verifyApiKey(request, reply);
   } else if (request.headers['x-wallet-address'] && request.headers['x-message'] && request.headers['x-signature']) {
