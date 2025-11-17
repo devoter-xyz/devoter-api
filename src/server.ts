@@ -19,7 +19,6 @@ import { authMiddleware } from "./middleware/auth.js";
 import { correlationIdMiddleware } from "./middleware/correlationId.js";
 import { prismaPlugin, prisma } from "./lib/prisma.js";
 import { getRateLimitStatus } from "./lib/rateLimitAnalytics.js";
-import { authMiddleware } from "./middleware/auth.js";
 
 config();
 
@@ -29,7 +28,7 @@ async function checkDatabaseConnection() {
     await prisma.$queryRaw`SELECT 1`;
     return { status: "ok" };
   } catch (error) {
-    return { status: "error", error: error.message };
+    return { status: "error", error: error instanceof Error ? error.message : String(error) };
   }
 }
 

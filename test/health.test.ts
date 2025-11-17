@@ -9,7 +9,9 @@ vi.mock("../src/lib/prisma.js", () => {
   };
   return {
     prisma: mockPrisma,
-    prismaPlugin: {},
+    prismaPlugin: async (fastify, opts) => {
+      fastify.decorate("prisma", mockPrisma);
+    },
   };
 });
 
@@ -17,11 +19,11 @@ let server;
 
 // Mock authMiddleware for detailed health check
 vi.mock("../src/middleware/auth.js", () => ({
-  authMiddleware: vi.fn((request, reply, done) => {
+  authMiddleware: vi.fn(async (request, reply) => {
     if (request.headers["x-api-key"] === "valid-api-key") {
-      done();
+      return;
     } else {
-      reply.status(401).send({ message: "Unauthorized" });
+      throw new Error("Unauthorized");
     }
   }),
 }));

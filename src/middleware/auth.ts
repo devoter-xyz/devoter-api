@@ -181,9 +181,10 @@ export async function authMiddleware(
   } else if (request.headers['x-wallet-address'] && request.headers['x-message'] && request.headers['x-signature']) {
     await verifyWalletSignatureFromHeaders(request, reply);
   } else {
-    // If no auth headers are present, allow the request to proceed to route handlers
-    // Route handlers can then implement their own specific auth requirements
-    return;
+    throw ApiError.unauthorized(
+      "Authentication required",
+      "AUTHENTICATION_REQUIRED"
+    );
   }
 }
 
