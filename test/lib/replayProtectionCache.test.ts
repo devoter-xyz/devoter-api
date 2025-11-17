@@ -1,6 +1,6 @@
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { ReplayProtectionCache } from '../src/lib/replayProtectionCache';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { ReplayProtectionCache } from '~/lib/replayProtectionCache';
 
 describe('ReplayProtectionCache', () => {
   let cache: ReplayProtectionCache;
@@ -51,15 +51,24 @@ describe('ReplayProtectionCache', () => {
     expect(cache.has(key2)).toBe(true); // Should still be active
   });
 
-  it('should handle concurrent access scenarios', () => {
+  it('should handle concurrent access scenarios', async () => {
     const key = 'concurrent-key';
-    const results = Promise.all([
-      Promise.resolve(cache.set(key, 5)),
-      Promise.resolve(cache.set(key, 5)),
-      Promise.resolve(cache.has(key)),
+    const results = await Promise.all([
+      (async () => {
+        await new Promise(resolve => setTimeout(resolve, 0));
+        return cache.set(key, 5);
+      })(),
+      (async () => {
+        await new Promise(resolve => setTimeout(resolve, 0));
+        return cache.set(key, 5);
+      })(),
+      (async () => {
+        await new Promise(resolve => setTimeout(resolve, 0));
+        return cache.has(key);
+      })(),
     ]);
 
-    expect(results).resolves.toEqual([true, false, true]);
+    expect(results).toEqual([true, false, true]);
   });
 
   it('should handle rapid successive requests', () => {
