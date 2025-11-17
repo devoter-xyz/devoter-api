@@ -111,7 +111,7 @@ export const rateLimitKeyGenerator = (request: FastifyRequest) => {
  * Register rate limiting plugin with different configurations
  */
 export async function registerRateLimiting(fastify: FastifyInstance) {
-  await fastify.register((await import('@fastify/rate-limit')).default, {
+  await fastify.register(await import('@fastify/rate-limit'), {
     global: false,
     errorResponseBuilder: rateLimitErrorHandler,
     keyGenerator: rateLimitKeyGenerator,
