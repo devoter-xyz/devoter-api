@@ -18,7 +18,7 @@ import rateLimitMetricsRoutes from "./routes/rateLimitMetrics.js";
 import { authMiddleware } from "./middleware/auth.js";
 import { correlationIdMiddleware } from "./middleware/correlationId.js";
 import { prismaPlugin, prisma } from "./lib/prisma.js";
-import { getRateLimitStatus } from "./lib/rateLimitAnalytics.js";
+import { getRateLimitAnalytics } from "./lib/rateLimitAnalytics.js";
 
 config();
 
@@ -28,7 +28,11 @@ async function checkDatabaseConnection() {
     await prisma.$queryRaw`SELECT 1`;
     return { status: "ok" };
   } catch (error) {
-    return { status: "error", error: error instanceof Error ? error.message : String(error) };
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    if (process.env.NODE_ENV !== "production") {
+      console.error("Database connection error:", errorMessage);
+    }
+    return { status: "error", error: "database unavailable" };
   }
 }
 
@@ -121,7 +125,7 @@ export async function build() {
   server.get("/health/detailed", { onRequest: [authMiddleware] }, async (request, reply) => {
     const dbStatus = await checkDatabaseConnection();
     const memoryUsage = getMemoryUsage();
-    const rateLimit = getRateLimitStatus();
+    const rateLimit = getRateLimitAnalytics();
 
     const isHealthy = dbStatus.status === "ok";
 
