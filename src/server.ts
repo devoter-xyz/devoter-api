@@ -19,6 +19,7 @@ import registerRoutes from "./routes/register.js";
 import rateLimitMetricsRoutes from "./routes/rateLimitMetrics.js";
 import { authMiddleware } from "./middleware/auth.js";
 import { correlationIdMiddleware } from "./middleware/correlationId.js";
+import { requestIdMiddleware } from "./middleware/requestId.js";
 import { prismaPlugin, prisma } from "./lib/prisma.js";
 import { getRateLimitAnalytics } from "./lib/rateLimitAnalytics.js";
 import { recordApiKeyUsage } from "./lib/apiKeyUsageTracker.js";
@@ -29,6 +30,7 @@ config();
 declare module 'fastify' {
   interface FastifyRequest {
     startTime?: number;
+    id: string;
   }
 }
 
@@ -69,6 +71,8 @@ export async function build() {
     logger: {
       level: process.env.NODE_ENV === "production" ? "info" : "debug",
     },
+    // Allow overriding error handlers, useful in test environments or for specific plugin behaviors
+    allowErrorHandlerOverride: true,
   });
 
   // Validate required environment variables
@@ -84,6 +88,7 @@ export async function build() {
 
   // Register plugins
   await server.register(errorPlugin);
+  await server.register(requestIdMiddleware);
   await server.register(requestTimingPlugin);
   await server.register(cors, corsOptions);
   await server.register(prismaPlugin);

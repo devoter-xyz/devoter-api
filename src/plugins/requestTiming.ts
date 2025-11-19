@@ -74,6 +74,7 @@ const requestTimingPlugin: FastifyPluginAsync = async (fastify) => {
     if (debugTiming) {
       fastify.log.debug(
         {
+          id: request.id,
           path: request.url,
           method: request.method,
           statusCode: reply.statusCode,
@@ -86,7 +87,7 @@ const requestTimingPlugin: FastifyPluginAsync = async (fastify) => {
     reply.header('X-Response-Time', `${duration.toFixed(2)}ms`);
 
     if (duration > SLOW_REQUEST_THRESHOLD_MS) {
-      fastify.log.warn(`Slow request: ${request.method} ${request.url} - ${duration.toFixed(2)}ms`);
+      fastify.log.warn(`Slow request: ${request.method} ${request.url} - ${duration.toFixed(2)}ms, Request ID: ${request.id}`);
     }
 
     return payload;
