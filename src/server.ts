@@ -19,6 +19,7 @@ import registerRoutes from "./routes/register.js";
 import rateLimitMetricsRoutes from "./routes/rateLimitMetrics.js";
 import { authMiddleware } from "./middleware/auth.js";
 import { correlationIdMiddleware } from "./middleware/correlationId.js";
+import { requestIdMiddleware } from "./middleware/requestId.js";
 import { prismaPlugin, prisma } from "./lib/prisma.js";
 import { getRateLimitAnalytics } from "./lib/rateLimitAnalytics.js";
 import { recordApiKeyUsage } from "./lib/apiKeyUsageTracker.js";
@@ -29,6 +30,7 @@ config();
 declare module 'fastify' {
   interface FastifyRequest {
     startTime?: number;
+    id: string;
   }
 }
 
@@ -94,6 +96,7 @@ export async function build() {
     request.startTime = Date.now();
     done();
   });
+  await server.register(requestIdMiddleware);
   server.addHook("onRequest", correlationIdMiddleware);
   server.addHook("onRequest", authMiddleware);
 
