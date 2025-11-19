@@ -1,9 +1,4 @@
-import { JSDOM } from 'jsdom';
-import DOMPurify from 'dompurify';
-
-// Initialize DOMPurify with a JSDOM environment
-const { window } = new JSDOM('');
-const purify = DOMPurify(window);
+import DOMPurify from 'isomorphic-dompurify';
 
 /**
  * Sanitizes a string by removing HTML tags, preventing XSS, and normalizing Unicode.
@@ -22,26 +17,10 @@ export function sanitizeString(input: string): string {
 
   // Use DOMPurify to remove HTML and prevent XSS attacks
   // Configure DOMPurify to allow only plain text, effectively stripping all HTML
-  sanitized = purify.sanitize(sanitized, { USE_PROFILES: { html: false } });
+  sanitized = DOMPurify.sanitize(sanitized, { USE_PROFILES: { html: false } });
 
-  // Basic SQL injection pattern removal (this is a defense-in-depth measure,
-  // proper parameterized queries are the primary defense)
-  // Remove common SQL keywords and characters that could be used in injection
-  sanitized = sanitized.replace(/<script.*?>.*?<\/script>/gis, ''); // Remove script tags
-  sanitized = sanitized.replace(/javascript:/gis, ''); // Remove javascript: URIs
-  sanitized = sanitized.replace(/vbscript:/gis, ''); // Remove vbscript: URIs
-  sanitized = sanitized.replace(/eval\((.*)\)/gis, ''); // Remove eval()
-  sanitized = sanitized.replace(/expression\((.*)\)/gis, ''); // Remove expression()
-  sanitized = sanitized.replace(/onload=/gis, ''); // Remove onload=
-  sanitized = sanitized.replace(/onerror=/gis, ''); // Remove onerror=
-  sanitized = sanitized.replace(/<img\s+src\s*=\s*['"]?data:image\/svg\+xml/gis, ''); // Remove SVG data URIs
-  sanitized = sanitized.replace(/<svg\/onload=/gis, ''); // Remove SVG onload
-  sanitized = sanitized.replace(/<a\s+href\s*=\s*['"]?javascript:/gis, ''); // Remove javascript: in href
-
-  // Remove or escape characters commonly used in SQL injection if not handled by ORM/DB drivers
-  // This is a very basic example and should not replace proper parameterized queries.
-  sanitized = sanitized.replace(/['";`]/g, ''); // Remove single quotes, double quotes, semicolons, backticks
-  sanitized = sanitized.replace(/(--|#|\/\*|\*\/)/g, ''); // Remove SQL comments
+  // XSS attacks are handled by DOMPurify. SQL injection must be prevented at the DB layer
+  // with parameterized queries/prepared statements, not by mutating user input.
 
   // Trim whitespace at the very end, after all other sanitization
   sanitized = sanitized.trim();
