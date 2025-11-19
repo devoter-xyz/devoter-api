@@ -19,9 +19,15 @@ import { authMiddleware } from "./middleware/auth.js";
 import { correlationIdMiddleware } from "./middleware/correlationId.js";
 import { prismaPlugin, prisma } from "./lib/prisma.js";
 import { getRateLimitAnalytics } from "./lib/rateLimitAnalytics.js";
+import { recordApiKeyUsage } from "./lib/apiKeyUsageTracker.js";
 
 config();
 
+declare module 'fastify' {
+  interface FastifyRequest {
+    startTime?: number;
+  }
+}
 
 async function checkDatabaseConnection() {
   try {
@@ -77,8 +83,19 @@ export async function build() {
   await server.register(prismaPlugin);
 
   // Register middleware
+  server.addHook("onRequest", (request, reply, done) => {
+    request.startTime = Date.now();
+    done();
+  });
   server.addHook("onRequest", correlationIdMiddleware);
   server.addHook("onRequest", authMiddleware);
+
+  server.addHook("onResponse", (request, reply, done) => {
+    if (request.startTime) {
+      recordApiKeyUsage(request, reply, request.startTime);
+    }
+    done();
+  });
 
   // Register rate limiting
   await registerRateLimiting(server);
