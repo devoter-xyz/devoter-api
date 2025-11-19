@@ -33,15 +33,16 @@ const getCorsConfig = (): CorsConfig => {
   };
 };
 
+const corsConfig = getCorsConfig();
+
 export const corsOptions: FastifyCorsOptions = {
   origin: (origin, callback) => {
-    const config = getCorsConfig();
-    if (!origin || config.allowedOrigins.includes('*')) {
+    if (!origin || corsConfig.allowedOrigins.includes('*')) {
       callback(null, true);
       return;
     }
 
-    const isAllowed = config.allowedOrigins.some((allowedOrigin) => {
+    const isAllowed = corsConfig.allowedOrigins.some((allowedOrigin) => {
       if (typeof allowedOrigin === 'string') {
         return allowedOrigin === origin;
       }
@@ -54,14 +55,14 @@ export const corsOptions: FastifyCorsOptions = {
       callback(new Error('Not allowed by CORS'), false);
     }
   },
-  methods: getCorsConfig().allowedMethods,
-  allowedHeaders: getCorsConfig().allowedHeaders,
-  credentials: getCorsConfig().credentials,
+  methods: corsConfig.allowedMethods,
+  allowedHeaders: corsConfig.allowedHeaders,
+  credentials: corsConfig.credentials,
 };
 
 export const validateCorsConfig = () => {
   const config = getCorsConfig();
-  if (config.allowedOrigins.length === 0 && !config.allowedOrigins.includes('*')) {
+  if (config.allowedOrigins.length === 0) {
     console.warn('CORS: No allowed origins specified. Consider setting CORS_ALLOWED_ORIGINS or explicitly using "*" for all origins.');
   }
   console.log('CORS Configuration Validated:', config);
