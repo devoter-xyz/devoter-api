@@ -1,6 +1,6 @@
-import type { FastifyInstance, FastifyPluginOptions } from 'fastify';
 import { verifySignature, verifySignatureWithTimestamp, isValidEthereumAddress } from '../utils/verifySignature.js';
 import { replayProtectionCache } from '../lib/replayProtectionCache.js';
+import { sanitizeObject } from '../utils/sanitization.js';
 
 const REPLAY_PROTECTION_TTL = 330; // 5.5 minutes, slightly longer than typical 5-minute timestamp window
 
@@ -79,7 +79,8 @@ async function notificationsRoutes(fastify: FastifyInstance, options: Notificati
       },
     },
   }, async (request, reply) => {
-    const { user, message, signedMessage, signature } = request.body as {
+    const sanitizedBody = sanitizeObject(request.body);
+    const { user, message, signedMessage, signature } = sanitizedBody as {
       user: string;
       message: string;
       signedMessage: string;

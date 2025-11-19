@@ -1,3 +1,5 @@
+import { sanitizeObject } from './sanitization';
+
 /**
  * Validation utilities for request input
  */
@@ -11,6 +13,7 @@ export interface WalletAuthInput {
 export interface ValidationResult {
   isValid: boolean;
   error?: string;
+  sanitizedInput?: any; // Add this line
 }
 
 export interface CommentInput {
@@ -51,11 +54,13 @@ export function isValidEthereumSignatureFormat(signature: string): boolean {
  * @returns A ValidationResult object indicating if the input is valid and an error message if not.
  */
 export function validateCommentInput(input: CommentInput): ValidationResult {
-  if (!input || typeof input !== "object" || Array.isArray(input)) {
+  const sanitizedInput = sanitizeObject(input);
+
+  if (!sanitizedInput || typeof sanitizedInput !== "object" || Array.isArray(sanitizedInput)) {
     return { isValid: false, error: "Request body must be a valid JSON object" };
   }
 
-  const { user, comment } = input;
+  const { user, comment } = sanitizedInput;
 
   if (!isStringAndNotEmpty(user, 3, 50)) {
     return { isValid: false, error: "User is required and must be a string between 3 and 50 characters" };
@@ -65,7 +70,7 @@ export function validateCommentInput(input: CommentInput): ValidationResult {
     return { isValid: false, error: "Comment is required and must be a string between 1 and 500 characters" };
   }
 
-  return { isValid: true };
+  return { isValid: true, sanitizedInput };
 }
 
 /**
@@ -74,11 +79,13 @@ export function validateCommentInput(input: CommentInput): ValidationResult {
  * @returns A ValidationResult object indicating if the input is valid and an error message if not.
  */
 function _validateWalletPayload(payload: any): ValidationResult {
-  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+  const sanitizedPayload = sanitizeObject(payload);
+
+  if (!sanitizedPayload || typeof sanitizedPayload !== "object" || Array.isArray(sanitizedPayload)) {
     return { isValid: false, error: "Request body must be a valid JSON object" };
   }
 
-  const { walletAddress, message, signature } = payload;
+  const { walletAddress, message, signature } = sanitizedPayload;
 
   // Check for presence of all required fields
   if (!Object.prototype.hasOwnProperty.call(payload, "walletAddress") ||
@@ -106,7 +113,7 @@ function _validateWalletPayload(payload: any): ValidationResult {
     return { isValid: false, error: "Invalid signature format. Must be a valid Ethereum signature (0x + 130 hex chars)" };
   }
 
-  return { isValid: true };
+  return { isValid: true, sanitizedInput: sanitizedPayload };
 }
 
 /**
