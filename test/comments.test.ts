@@ -34,7 +34,7 @@ describe('Comments Route Pagination', () => {
     // Clear comments and populate with test data
     mockComments.length = 0; // Clear the array
     for (let i = 0; i < 25; i++) {
-    comments.push({
+    mockComments.push({
         id: `comment-${i < 10 ? '0' : ''}${i}`,
         pollId: pollId,
         user: `user-${i}`,
