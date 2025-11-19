@@ -179,4 +179,4 @@ export async function exportApiKeyUsageData(options: UsageExportOptions): Promis
         }
         // Handle potential commas in string values by quoting them
         if (typeof value === 'string' && value.includes(',')) {
-          return `"${value.replace(/
+          return `"${value.split('"').join('""')}"`

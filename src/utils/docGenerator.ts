@@ -42,6 +42,10 @@ export default fp(async (fastify: FastifyInstance) => {
     },
   });
 
+  fastify.get('/docs/openapi.json', { schema: { hide: true } }, (request, reply) => {
+    reply.status(200).send(fastify.swagger());
+  });
+
   await fastify.register(swaggerUi, {
     routePrefix: '/docs',
     uiConfig: {
