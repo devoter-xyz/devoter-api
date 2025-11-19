@@ -17,9 +17,38 @@ import {
 } from "../utils/errorHandler.js";
 import { prisma } from "../lib/prisma.js";
 import { validateScopes, ALL_SCOPES } from "../utils/permissions.js";
+import { getApiKeyUsageStatistics, getApiKeyUsageData, exportApiKeyUsageData } from "../utils/analytics.js";
 
 export default async function apiKeysRoute(fastify: FastifyInstance) {
-  
+
+  type CreateApiKeyRequestBody = Static<typeof CreateApiKeyRequestBodySchema>;
+  const CreateApiKeyRequestBodySchema = Type.Object({
+    walletAddress: Type.String({ pattern: '^0x[a-fA-F0-9]{40}$' }),
+    message: Type.String({ minLength: 1, maxLength: 1000 }),
+    signature: Type.String({ pattern: '^0x[a-fA-F0-9]{130}$' }),
+    scopes: Type.Optional(Type.Array(Type.String({ enum: ALL_SCOPES }))),
+  });
+
+  type GetApiKeyUsageParams = Static<typeof GetApiKeyUsageParamsSchema>;
+  const GetApiKeyUsageParamsSchema = Type.Object({
+    id: Type.String(),
+  });
+
+  type GetApiKeyUsageQuery = Static<typeof GetApiKeyUsageQuerySchema>;
+  const GetApiKeyUsageQuerySchema = Type.Object({
+    startDate: Type.Optional(Type.String({ format: 'date-time' })),
+    endDate: Type.Optional(Type.String({ format: 'date-time' })),
+    limit: Type.Optional(Type.Number({ minimum: 1, maximum: 1000, default: 100 })),
+    offset: Type.Optional(Type.Number({ minimum: 0, default: 0 })),
+  });
+
+  type ExportApiKeyUsageQuery = Static<typeof ExportApiKeyUsageQuerySchema>;
+  const ExportApiKeyUsageQuerySchema = Type.Object({
+    format: Type.Enum(Type.Literal('csv'), Type.Literal('json')), // Use Type.Enum for literal union
+    startDate: Type.Optional(Type.String({ format: 'date-time' })),
+    endDate: Type.Optional(Type.String({ format: 'date-time' })),
+  });
+
   // POST /api-keys - Create a new API key
   fastify.post("/api-keys", {
     schema: {
@@ -583,4 +612,196 @@ export default async function apiKeysRoute(fastify: FastifyInstance) {
       });
     }),
   });
+
+  // GET /api-keys/:id/usage - Get usage statistics for a specific API key
+  fastify.get<{ 
+    Params: GetApiKeyUsageParams;
+    Querystring: GetApiKeyUsageQuery;
+    Headers: { 'x-wallet-address': string; 'x-message': string; 'x-signature': string };
+  }>("/api-keys/:id/usage", {
+    schema: {
+      params: GetApiKeyUsageParamsSchema,
+      querystring: GetApiKeyUsageQuerySchema,
+      headers: Type.Object(
+        {
+          "x-wallet-address": Type.String({ pattern: '^0x[a-fA-F0-9]{40}$' }),
+          "x-message": Type.String({ minLength: 1, maxLength: 1000 }),
+          "x-signature": Type.String({ pattern: '^0x[a-fA-F0-9]{130}$' }),
+        },
+        { additionalProperties: true }
+      ),
+      response: {
+        200: Type.Object({
+          success: Type.Literal(true),
+          totalRequests: Type.Number(),
+          usageByEndpoint: Type.Array(Type.Object({
+            endpoint: Type.String(),
+            count: Type.Number(),
+            averageResponseTime: Type.Union([Type.Number(), Type.Null()]),
+            totalResponseTime: Type.Union([Type.Number(), Type.Null()]),
+          })),
+          usageByStatusCode: Type.Array(Type.Object({
+            statusCode: Type.Number(),
+            count: Type.Number(),
+          })),
+          overallAverageResponseTime: Type.Union([Type.Number(), Type.Null()]),
+        }),
+        400: Type.Object({
+          success: Type.Literal(false),
+          error: Type.String(),
+        }),
+        401: Type.Object({
+          success: Type.Literal(false),
+          error: Type.String(),
+        }),
+        403: Type.Object({
+          success: Type.Literal(false),
+          error: Type.String(),
+        }),
+        404: Type.Object({
+          success: Type.Literal(false),
+          error: Type.String(),
+        }),
+        500: Type.Object({
+          success: Type.Literal(false),
+          error: Type.String(),
+        }),
+      },
+    },
+    config: {
+      rateLimit: rateLimitConfigs.general,
+    },
+    preHandler: verifyWalletSignatureFromHeaders,
+    handler: asyncHandler(async (request, reply) => {
+      const { id: apiKeyId } = request.params;
+      const walletAddress = (request.headers["x-wallet-address"] as string).trim().toLowerCase();
+      const { startDate, endDate } = request.query;
+
+      const user = await prisma.apiUser.findUnique({
+        where: { walletAddress },
+        include: {
+          apiKeys: {
+            where: { id: apiKeyId },
+          },
+        },
+      });
+
+      if (!user || user.apiKeys.length === 0) {
+        throw ApiError.notFound("API key not found for this user.", "API_KEY_NOT_FOUND");
+      }
+
+      const stats = await getApiKeyUsageStatistics({
+        apiKeyId,
+        startDate: startDate ? new Date(startDate) : undefined,
+        endDate: endDate ? new Date(endDate) : undefined,
+      });
+
+      request.log.info({
+        userId: user.id,
+        apiKeyId: apiKeyId,
+        correlationId: request.correlationId,
+        operation: 'apiKey.getUsageStatistics',
+        outcome: 'success',
+        message: 'Successfully retrieved API key usage statistics',
+      });
+
+      return reply.status(HttpStatusCode.OK).send({
+        success: true,
+        ...stats,
+      });
+    }),
+  });
+
+  // GET /api-keys/:id/usage/export - Export usage data for a specific API key
+  fastify.get<{ 
+    Params: GetApiKeyUsageParams;
+    Querystring: ExportApiKeyUsageQuery;
+    Headers: { 'x-wallet-address': string; 'x-message': string; 'x-signature': string };
+  }>("/api-keys/:id/usage/export", {
+    schema: {
+      params: GetApiKeyUsageParamsSchema,
+      querystring: ExportApiKeyUsageQuerySchema,
+      headers: Type.Object(
+        {
+          "x-wallet-address": Type.String({ pattern: '^0x[a-fA-F0-9]{40}$' }),
+          "x-message": Type.String({ minLength: 1, maxLength: 1000 }),
+          "x-signature": Type.String({ pattern: '^0x[a-fA-F0-9]{130}$' }),
+        },
+        { additionalProperties: true }
+      ),
+      response: {
+        200: Type.Any(), // Response can be CSV string or JSON array
+        400: Type.Object({
+          success: Type.Literal(false),
+          error: Type.String(),
+        }),
+        401: Type.Object({
+          success: Type.Literal(false),
+          error: Type.String(),
+        }),
+        403: Type.Object({
+          success: Type.Literal(false),
+          error: Type.String(),
+        }),
+        404: Type.Object({
+          success: Type.Literal(false),
+          error: Type.String(),
+        }),
+        500: Type.Object({
+          success: Type.Literal(false),
+          error: Type.String(),
+        }),
+      },
+    },
+    config: {
+      rateLimit: rateLimitConfigs.general,
+    },
+    preHandler: verifyWalletSignatureFromHeaders,
+    handler: asyncHandler(async (request, reply) => {
+      const { id: apiKeyId } = request.params;
+      const walletAddress = (request.headers["x-wallet-address"] as string).trim().toLowerCase();
+      const { format, startDate, endDate } = request.query;
+
+      const user = await prisma.apiUser.findUnique({
+        where: { walletAddress },
+        include: {
+          apiKeys: {
+            where: { id: apiKeyId },
+          },
+        },
+      });
+
+      if (!user || user.apiKeys.length === 0) {
+        throw ApiError.notFound("API key not found for this user.", "API_KEY_NOT_FOUND");
+      }
+
+      const exportData = await exportApiKeyUsageData({
+        apiKeyId,
+        format,
+        startDate: startDate ? new Date(startDate) : undefined,
+        endDate: endDate ? new Date(endDate) : undefined,
+      });
+
+      request.log.info({
+        userId: user.id,
+        apiKeyId: apiKeyId,
+        format: format,
+        correlationId: request.correlationId,
+        operation: 'apiKey.exportUsageData',
+        outcome: 'success',
+        message: 'Successfully exported API key usage data',
+      });
+
+      if (format === 'csv') {
+        reply.header('Content-Type', 'text/csv');
+        reply.header('Content-Disposition', `attachment; filename="api-key-${apiKeyId}-usage.csv"`);
+      } else if (format === 'json') {
+        reply.header('Content-Type', 'application/json');
+        reply.header('Content-Disposition', `attachment; filename="api-key-${apiKeyId}-usage.json"`);
+      }
+
+      return reply.status(HttpStatusCode.OK).send(exportData);
+    }),
+  });
 }
+
