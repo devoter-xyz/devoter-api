@@ -1,5 +1,5 @@
 import { prisma } from "../lib/prisma.js";
-import { ApiError } from "../utils/errorHandler.js";
+import { ApiError, HttpStatusCode } from "../utils/errorHandler.js";
 
 interface UsageQueryOptions {
   apiKeyId: string;
@@ -179,4 +179,13 @@ export async function exportApiKeyUsageData(options: UsageExportOptions): Promis
         }
         // Handle potential commas in string values by quoting them
         if (typeof value === 'string' && value.includes(',')) {
-          return `"${value.replace(/
+          return `"${value.split('"').join('""')}"`;
+        }
+        return value;
+      })).join(',');
+
+    return [headers, ...rows].join('\n');
+  } else {
+    throw new ApiError(HttpStatusCode.BAD_REQUEST, 'Invalid export format specified.', 'INVALID_EXPORT_FORMAT');
+  }
+}

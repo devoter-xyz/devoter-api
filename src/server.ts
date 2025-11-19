@@ -22,6 +22,7 @@ import { correlationIdMiddleware } from "./middleware/correlationId.js";
 import { prismaPlugin, prisma } from "./lib/prisma.js";
 import { getRateLimitAnalytics } from "./lib/rateLimitAnalytics.js";
 import { recordApiKeyUsage } from "./lib/apiKeyUsageTracker.js";
+import docGenerator from "./utils/docGenerator.js";
 
 config();
 
@@ -86,6 +87,7 @@ export async function build() {
   await server.register(requestTimingPlugin);
   await server.register(cors, corsOptions);
   await server.register(prismaPlugin);
+  await server.register(docGenerator);
 
   // Register middleware
   server.addHook("onRequest", (request, reply, done) => {
