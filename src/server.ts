@@ -71,6 +71,8 @@ export async function build() {
     logger: {
       level: process.env.NODE_ENV === "production" ? "info" : "debug",
     },
+    // Allow overriding error handlers, useful in test environments or for specific plugin behaviors
+    allowErrorHandlerOverride: true,
   });
 
   // Validate required environment variables
@@ -86,6 +88,7 @@ export async function build() {
 
   // Register plugins
   await server.register(errorPlugin);
+  await server.register(requestIdMiddleware);
   await server.register(requestTimingPlugin);
   await server.register(cors, corsOptions);
   await server.register(prismaPlugin);
@@ -96,7 +99,6 @@ export async function build() {
     request.startTime = Date.now();
     done();
   });
-  await server.register(requestIdMiddleware);
   server.addHook("onRequest", correlationIdMiddleware);
   server.addHook("onRequest", authMiddleware);
 

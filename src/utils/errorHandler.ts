@@ -1,4 +1,5 @@
 import type { FastifyReply, RouteGenericInterface, FastifyRequest } from "fastify";
+import { randomUUID } from 'crypto';
 
 export enum HttpStatusCode {
   // Success codes
@@ -153,10 +154,10 @@ export function handleError(
 ): void {
   let apiError: ApiError;
 
-  // Determine correlation ID: use existing from ApiError or request ID
+  // Determine correlation ID: use existing from ApiError, request ID, or generate a new UUID
   const correlationId = (error instanceof ApiError && error.correlationId)
     ? error.correlationId
-    : request.id;
+    : request.id || randomUUID();
 
   // Log the error with correlation ID
   request.log.error({ error, correlationId }, error.message);
