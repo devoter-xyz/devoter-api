@@ -31,7 +31,7 @@ async function initializePrismaWithRetries(retries = MAX_RETRIES): Promise<Prism
   }
 }
 
-export const prisma: PrismaClient = globalForPrisma.prisma || await initializePrismaWithRetries();
+export const prisma: PrismaClient = globalForPrisma.prisma || (process.env.VITEST ? new PrismaClient() : await initializePrismaWithRetries());
 
 if (process.env.NODE_ENV !== "production") {
   globalForPrisma.prisma = prisma;
