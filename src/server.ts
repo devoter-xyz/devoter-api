@@ -1,6 +1,8 @@
 
 import fastify from "fastify";
 import { config } from "dotenv";
+import cors from '@fastify/cors';
+import { corsOptions, validateCorsConfig } from './config/cors.js';
 import {
   registerRateLimiting,
   rateLimitConfigs,
@@ -77,9 +79,12 @@ export async function build() {
     }
   }
 
+  validateCorsConfig();
+
   // Register plugins
   await server.register(errorPlugin);
   await server.register(requestTimingPlugin);
+  await server.register(cors, corsOptions);
   await server.register(prismaPlugin);
 
   // Register middleware
@@ -102,6 +107,9 @@ export async function build() {
   server.setErrorHandler((error, request, reply) => {
     if ((error as any).statusCode === 429) {
       return reply.status(429).send(rateLimitErrorHandler(request, error));
+    }
+    if (error.message === 'Not allowed by CORS') {
+      return reply.status(403).send({ message: 'Forbidden: Not allowed by CORS' });
     }
     reply.send(error);
   });
