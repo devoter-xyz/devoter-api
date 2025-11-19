@@ -58,20 +58,18 @@ const commentsRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) => {
 
   fastify.post('/poll/:pollId', asyncHandler(async (request: FastifyRequest<{ Params: { pollId: string }; Body: { user?: string; comment?: string } }>, reply: FastifyReply) => {
     const { pollId } = request.params;
-    const { user, comment } = request.body as { user?: string; comment?: string };
-
-    const trimmedUser = (user || '').trim();
-    const trimmedComment = (comment || '').trim();
-
-    const validation = validateCommentInput({ user: trimmedUser, comment: trimmedComment });
+    const validation = validateCommentInput(request.body as CommentInput);
     if (!validation.isValid) {
       throw ApiError.badRequest(validation.error, "BAD_REQUEST");
     }
+
+    const { user, comment } = validation.sanitizedInput as CommentInput;
+
     const newComment = {
       id: Math.random().toString(36).substr(2, 9),
       pollId,
-      user: trimmedUser,
-      comment: trimmedComment,
+      user,
+      comment,
       createdAt: new Date(),
     };
     comments.push(newComment);

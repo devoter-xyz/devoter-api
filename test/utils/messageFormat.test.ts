@@ -114,29 +114,32 @@ describe('Message Format Validation', () => {
   });
 
   describe('Message security validation', () => {
-  it('should return valid for messages with potential XSS content (current implementation)', () => {
-      const xssMessages = [
-        '<script>alert("XSS")</script>',
-        'javascript:alert("XSS")',
-        '<img src="x" onerror="alert(\'XSS\')" />',
-        '" onmouseover="alert(\'XSS\')"'
-      ];
-
-      // The current implementation doesn't check for XSS content
-      // so these messages should pass validation
-      xssMessages.forEach(message => {
-        const input = {
-          walletAddress: validWalletAddress,
-          message,
-          signature: validSignature
-        };
-        const result = validateWalletAuthInput(input);
-        expect(result.isValid).toBe(true);
-        expect(result.error).toBeUndefined();
-      });
-
-    });
-
+      it('should return invalid for messages that are purely XSS content after sanitization', () => {
+            const xssMessages = [
+              '<script>alert("XSS")</script>',
+              'javascript:alert("XSS")',
+              '<img src="x" onerror="alert(\'XSS\')" />',
+              '" onmouseover="alert(\'XSS\')"'
+            ];
+  
+            // After sanitization, these messages will become empty or invalid,
+            // so validation should fail.
+                      xssMessages.forEach(message => {
+                        const input = {
+                          walletAddress: validWalletAddress,
+                          message,
+                          signature: validSignature
+                        };
+                        const result = validateWalletAuthInput(input);
+                        // Expect isValid to be false for messages that become empty after sanitization
+                        // and true for messages where XSS is neutralized but content remains (e.g., javascript:alert)
+                                    if (message === 'javascript:alert("XSS")' || message === '" onmouseover="alert(\'XSS\')"') {
+                                      expect(result.isValid).toBe(true);
+                                      expect(result.error).toBeUndefined();
+                                    } else {
+                                      expect(result.isValid).toBe(false);
+                                      expect(result.error).toBeDefined();
+                                    }                      });          });
   it('should return valid for messages with potential SQL injection content (current implementation)', () => {
       const sqlInjectionMessages = [
         "' OR '1'='1",
