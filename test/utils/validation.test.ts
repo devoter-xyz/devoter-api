@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { validateWalletAuthInput, isValidEthereumSignatureFormat, isValidEthereumAddress, validateEIP55Checksum, validationConfig, validateCommentInput } from '../../src/utils/validation';
+import { validateWalletAuthInput, isValidEthereumSignatureFormat, isValidEthereumAddress, validateEIP55Checksum, validateCommentInput } from '../../src/utils/validation';
 
 describe('Input Validation', () => {
   describe('validateWalletAuthInput', () => {

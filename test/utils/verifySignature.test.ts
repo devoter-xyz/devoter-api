@@ -23,10 +23,10 @@ import {
     let message: string;
     let signature: string;
 
-    beforeEach(() => {
+    beforeEach(async () => {
       wallet = Wallet.createRandom();
       message = "Hello, Vitest!";
-      signature = wallet.signingKey.sign(ethers.keccak256(ethers.toUtf8Bytes(message))).serialized;
+      signature = await wallet.signMessage(message);
     });
   /**
    * Test that a valid signature from a known wallet address is accepted.
@@ -93,9 +93,9 @@ import {
    * Ethereum addresses can be checksummed, lowercase, uppercase, or mixed case.
    */
     it("should return true for valid checksummed addresses, and false for non-checksummed when strict", async () => {
-      const validChecksummedAddress = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266";
-      const lowercaseAddress = "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266";
-      const uppercaseAddress = "0xF39FD6E51AAD88F6F4CE6AB8827279CFFFB92266";
+      const validChecksummedAddress = wallet.address;
+      const lowercaseAddress = wallet.address.toLowerCase();
+      const uppercaseAddress = wallet.address.toUpperCase();
 
       // When validationConfig.EIP55_CHECKSUM_VALIDATION_ENABLED is true (default)
       // Valid checksummed address should pass
@@ -206,7 +206,7 @@ import {
         const result = verifySignature(message, signature, "");
         expect(result.isValid).toBe(false);
         expect(result.error).toBe("Invalid Ethereum wallet address provided.");
-      });});
+      });
 
 // --- Timestamp Signature Verification ---
 // These tests verify signatures that include a timestamp in the message, ensuring time-based validity.
@@ -217,17 +217,17 @@ import {
     let signature: string;
     const maxAgeMinutes = 5;
 
-    beforeEach(() => {
+    beforeEach(async () => {
       wallet = Wallet.createRandom();
       purpose = "login";
       // Generate a message with a timestamp that is within the maxAgeMinutes
       const timestamp = Date.now();
       message = `Sign this message to ${purpose}: [${timestamp}]`;
-      signature = wallet.signingKey.sign(ethers.keccak256(ethers.toUtf8Bytes(message))).serialized;
+      signature = await wallet.signMessage(message);
     });
 
-    it("should return true for valid checksummed addresses in timestamped signature verification", () => {
-      const validChecksummedAddress = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266";
+    it("should return true for valid checksummed addresses in timestamped signature verification", async () => {
+      const validChecksummedAddress = wallet.address;
       const { isValid, error } = verifySignatureWithTimestamp(
         message,
         signature,
@@ -261,11 +261,11 @@ import {
       expect(error).toBeUndefined();
     });
 
-    it("should return false for expired timestamped signatures", () => {
+    it("should return false for expired timestamped signatures", async () => {
       // Create a message with an old timestamp
       const oldTimestamp = Date.now() - (maxAgeMinutes + 1) * 60 * 1000; // 1 minute past expiry
       const oldMessage = `Sign this message to ${purpose}: [${oldTimestamp}]`;
-      const oldSignature = wallet.signingKey.sign(ethers.keccak256(ethers.toUtf8Bytes(oldMessage))).serialized;
+      const oldSignature = await wallet.signMessage(oldMessage);
 
       const { isValid, error } = verifySignatureWithTimestamp(
         oldMessage,
@@ -277,11 +277,11 @@ import {
       expect(error).toBe("Message has expired");
     });
 
-    it("should return false for future timestamped signatures", () => {
+    it("should return false for future timestamped signatures", async () => {
       // Create a message with a future timestamp
       const futureTimestamp = Date.now() + 1 * 60 * 1000; // 1 minute in the future
       const futureMessage = `Sign this message to ${purpose}: [${futureTimestamp}]`;
-      const futureSignature = wallet.signingKey.sign(ethers.keccak256(ethers.toUtf8Bytes(futureMessage))).serialized;
+      const futureSignature = await wallet.signMessage(futureMessage);
 
       const { isValid, error } = verifySignatureWithTimestamp(
         futureMessage,
