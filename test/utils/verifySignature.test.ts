@@ -8,18 +8,26 @@
 //
 // Each test suite and test case is documented for clarity.
 //
-import { describe, it, expect } from "vitest";
-import { ethers } from "ethers";
+import { describe, it, expect, beforeEach } from "vitest";
+import { ethers, Wallet } from "ethers";
+import * as ValidationUtils from "../../src/utils/validation";
 import {
   verifySignature,
   verifySignatureWithTimestamp,
   generateSignMessage,
-  isValidEthereumAddress,
 } from "../../src/utils/verifySignature";
 
 // --- Basic Signature Verification ---
 // These tests check the core signature verification logic for Ethereum wallets.
-describe("Basic Signature Verification", () => {
+    let wallet: Wallet;
+    let message: string;
+    let signature: string;
+
+    beforeEach(() => {
+      wallet = Wallet.createRandom();
+      message = "Hello, Vitest!";
+      signature = wallet.signingKey.sign(ethers.keccak256(ethers.toUtf8Bytes(message))).serialized;
+    });
   /**
    * Test that a valid signature from a known wallet address is accepted.
    * This ensures the verifySignature function works for correct inputs.
@@ -84,87 +92,60 @@ describe("Basic Signature Verification", () => {
    * Test that the function is case-insensitive with respect to wallet addresses.
    * Ethereum addresses can be checksummed, lowercase, uppercase, or mixed case.
    */
-  it("should be case-insensitive for wallet addresses (mixed, lower, upper, checksum)", async () => {
-    // Create a wallet for signing
-    const wallet = new ethers.Wallet(
-      "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
-    );
-    const message = "Test message for case sensitivity";
+    it("should return true for valid checksummed addresses, and false for non-checksummed when strict", async () => {
+      const validChecksummedAddress = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266";
+      const lowercaseAddress = "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266";
+      const uppercaseAddress = "0xF39FD6E51AAD88F6F4CE6AB8827279CFFFB92266";
 
-    // Sign the message
-    const signature = await wallet.signMessage(message);
+      // When validationConfig.EIP55_CHECKSUM_VALIDATION_ENABLED is true (default)
+      // Valid checksummed address should pass
+      const { isValid: validChecksummedIsValid } = verifySignature(message, signature, validChecksummedAddress);
+      expect(validChecksummedIsValid).toBe(true);
 
-    // Test with original address (mixed case)
-    const originalAddressResult = verifySignature(
-      message,
-      signature,
-      wallet.address
-    );
-    expect(originalAddressResult.isValid).toBe(true);
-    expect(originalAddressResult.error).toBeUndefined();
+      // Lowercase and uppercase addresses should fail if strict checksum is enabled
+      const { isValid: lowercaseIsValid } = verifySignature(message, signature, lowercaseAddress);
+      expect(lowercaseIsValid).toBe(false);
 
-    // Test with lowercase address
-    const lowercaseAddressResult = verifySignature(
-      message,
-      signature,
-      wallet.address.toLowerCase()
-    );
-    expect(lowercaseAddressResult.isValid).toBe(true);
-    expect(lowercaseAddressResult.error).toBeUndefined();
-
-    // Test with uppercase address
-    const uppercaseAddressResult = verifySignature(
-      message,
-      signature,
-      wallet.address.toUpperCase()
-    );
-    expect(uppercaseAddressResult.isValid).toBe(true);
-    expect(uppercaseAddressResult.error).toBeUndefined();
-
-    // Test with mixed case variations
-    const mixedCaseAddress1 = wallet.address.toLowerCase().replace(/^0x/, "0X");
-    const mixedCaseResult1 = verifySignature(
-      message,
-      signature,
-      mixedCaseAddress1
-    );
-    expect(mixedCaseResult1.isValid).toBe(true);
-    expect(mixedCaseResult1.error).toBeUndefined();
-
-    // Test with checksum address (EIP-55)
-    const checksumAddress = ethers.getAddress(wallet.address);
-    const checksumResult = verifySignature(message, signature, checksumAddress);
-    expect(checksumResult.isValid).toBe(true);
-    expect(checksumResult.error).toBeUndefined();
-  });
+      const { isValid: uppercaseIsValid } = verifySignature(message, signature, uppercaseAddress);
+      expect(uppercaseIsValid).toBe(false);
+    });
 
   /**
    * Test signature verification with real-world Ethereum address formats.
    * Ensures compatibility with various address representations.
    */
-  it("should work with various real-world Ethereum wallet address formats", async () => {
-    // Test with a well-known Ethereum address (Vitalik's public address)
-    const realWallet = new ethers.Wallet(
-      "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
-    );
-    const message = "Real wallet test message";
-    const signature = await realWallet.signMessage(message);
-
-    // Test various real-world address formats
-    const addressFormats = [
-      realWallet.address, // Original format
-      realWallet.address.toLowerCase(), // All lowercase
-      realWallet.address.toUpperCase(), // All uppercase
-      ethers.getAddress(realWallet.address), // EIP-55 checksum
-    ];
-
-    for (const addressFormat of addressFormats) {
-      const result = verifySignature(message, signature, addressFormat);
-      expect(result.isValid).toBe(true);
-      expect(result.error).toBeUndefined();
-    }
-  });
-
+      it("should return true for valid checksummed addresses in various real-world formats, and false for non-checksummed when strict", async () => {
+        // Test with a well-known Ethereum address (Vitalik's public address)
+        const realWallet = new ethers.Wallet(
+          "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
+        );
+        const message = "Real wallet test message";
+        const signature = await realWallet.signMessage(message);
+  
+        // Test various real-world address formats
+        const addressFormats = [
+          realWallet.address, // Original format (checksummed)
+          ethers.getAddress(realWallet.address), // EIP-55 checksum
+        ];
+  
+        for (const addressFormat of addressFormats) {
+          const result = verifySignature(message, signature, addressFormat);
+          expect(result.isValid).toBe(true);
+          expect(result.error).toBeUndefined();
+        }
+  
+        // Non-checksummed addresses should fail if strict checksum is enabled
+        const nonChecksummedFormats = [
+          realWallet.address.toLowerCase(), // All lowercase
+          realWallet.address.toUpperCase(), // All uppercase
+        ];
+  
+        for (const addressFormat of nonChecksummedFormats) {
+          const result = verifySignature(message, signature, addressFormat);
+          expect(result.isValid).toBe(false);
+          expect(result.error).toBe("Invalid Ethereum wallet address provided.");
+        }
+      });
   /**
    * Test edge cases for signature recovery, such as invalid, empty, or too-short signatures.
    * Ensures the function fails gracefully for malformed input.
@@ -190,7 +171,7 @@ describe("Basic Signature Verification", () => {
     // Test with empty signature
     const emptyResult = verifySignature(message, "", wallet.address);
     expect(emptyResult.isValid).toBe(false);
-    expect(emptyResult.error).toBe("Signature cannot be empty");
+    expect(emptyResult.error).toBe("Signature cannot be empty or just whitespace");
 
     // Test with signature that's too short
     const shortSignature = "0x1234";
@@ -213,161 +194,158 @@ describe("Basic Signature Verification", () => {
     const signature = "0x...some-valid-signature..."; // Placeholder, actual value doesn't matter for this test
     const result = verifySignature("", signature, walletAddress);
     expect(result.isValid).toBe(false);
-    expect(result.error).toBe("Message cannot be empty");
+    expect(result.error).toBe("Message cannot be empty or just whitespace");
   });
 
-  it("should return false and an error for empty wallet address", async () => {
-    const wallet = new ethers.Wallet(
-      "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
-    );
-    const message = "Test message";
-    const signature = await wallet.signMessage(message);
-    const result = verifySignature(message, signature, "");
-    expect(result.isValid).toBe(false);
-    expect(result.error).toBe("Wallet address cannot be empty");
-  });
-});
+      it("should return false and an error for empty wallet address", async () => {
+        const wallet = new ethers.Wallet(
+          "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
+        );
+        const message = "Test message";
+        const signature = await wallet.signMessage(message);
+        const result = verifySignature(message, signature, "");
+        expect(result.isValid).toBe(false);
+        expect(result.error).toBe("Invalid Ethereum wallet address provided.");
+      });});
 
 // --- Timestamp Signature Verification ---
 // These tests verify signatures that include a timestamp in the message, ensuring time-based validity.
-describe("Timestamp Signature Verification", () => {
-  /**
-   * Test that timestamped signature verification is case-insensitive for wallet addresses.
-   * This ensures robust handling of address formats in time-based checks.
-   */
-  it("should be case-insensitive for wallet addresses in timestamped signature verification", async () => {
-    const wallet = new ethers.Wallet(
-      "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
-    );
+  describe("Timestamp Signature Verification", () => {
+    let wallet: Wallet;
+    let purpose: string;
+    let message: string;
+    let signature: string;
+    const maxAgeMinutes = 5;
 
-    // Generate a fresh timestamped message
-    const message = generateSignMessage("test-case-sensitivity");
-    const signature = await wallet.signMessage(message);
+    beforeEach(() => {
+      wallet = Wallet.createRandom();
+      purpose = "login";
+      // Generate a message with a timestamp that is within the maxAgeMinutes
+      const timestamp = Date.now();
+      message = `Sign this message to ${purpose}: [${timestamp}]`;
+      signature = wallet.signingKey.sign(ethers.keccak256(ethers.toUtf8Bytes(message))).serialized;
+    });
 
-    // Test with different case variations
-    const addressVariations = [
-      wallet.address, // Original mixed case
-      wallet.address.toLowerCase(), // All lowercase
-      wallet.address.toUpperCase(), // All uppercase
-      ethers.getAddress(wallet.address), // EIP-55 checksum
-    ];
-
-    for (const addressVariation of addressVariations) {
+    it("should return true for valid checksummed addresses in timestamped signature verification", () => {
+      const validChecksummedAddress = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266";
       const { isValid, error } = verifySignatureWithTimestamp(
         message,
         signature,
-        addressVariation,
-        5 // 5 minutes max age
+        validChecksummedAddress,
+        maxAgeMinutes
       );
       expect(isValid).toBe(true);
       expect(error).toBeUndefined();
-    }
+    });
+
+    it("should return false for non-checksummed addresses in timestamped signature verification when strict", () => {
+      const lowercaseAddress = "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266";
+      const { isValid, error } = verifySignatureWithTimestamp(
+        message,
+        signature,
+        lowercaseAddress,
+        maxAgeMinutes
+      );
+      expect(isValid).toBe(false);
+      expect(error).toBe("Invalid Ethereum wallet address provided.");
+    });
+
+    it("should return valid for recent (non-expired) timestamped signatures", () => {
+      const { isValid, error } = verifySignatureWithTimestamp(
+        message,
+        signature,
+        wallet.address,
+        maxAgeMinutes
+      );
+      expect(isValid).toBe(true);
+      expect(error).toBeUndefined();
+    });
+
+    it("should return false for expired timestamped signatures", () => {
+      // Create a message with an old timestamp
+      const oldTimestamp = Date.now() - (maxAgeMinutes + 1) * 60 * 1000; // 1 minute past expiry
+      const oldMessage = `Sign this message to ${purpose}: [${oldTimestamp}]`;
+      const oldSignature = wallet.signingKey.sign(ethers.keccak256(ethers.toUtf8Bytes(oldMessage))).serialized;
+
+      const { isValid, error } = verifySignatureWithTimestamp(
+        oldMessage,
+        oldSignature,
+        wallet.address,
+        maxAgeMinutes
+      );
+      expect(isValid).toBe(false);
+      expect(error).toBe("Message has expired");
+    });
+
+    it("should return false for future timestamped signatures", () => {
+      // Create a message with a future timestamp
+      const futureTimestamp = Date.now() + 1 * 60 * 1000; // 1 minute in the future
+      const futureMessage = `Sign this message to ${purpose}: [${futureTimestamp}]`;
+      const futureSignature = wallet.signingKey.sign(ethers.keccak256(ethers.toUtf8Bytes(futureMessage))).serialized;
+
+      const { isValid, error } = verifySignatureWithTimestamp(
+        futureMessage,
+        futureSignature,
+        wallet.address,
+        maxAgeMinutes
+      );
+      expect(isValid).toBe(false);
+      expect(error).toBe("Message timestamp is in the future");
+    });
   });
-
-  /**
-   * Test that recent (non-expired) timestamped signatures are accepted.
-   * Ensures the function allows valid, timely signatures.
-   */
-  it("should return valid for recent (non-expired) timestamped signatures", async () => {
-    const wallet = new ethers.Wallet(
-      "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
-    );
-
-    const message = generateSignMessage("test-recent");
-    const signature = await wallet.signMessage(message);
-
-    const { isValid, error } = verifySignatureWithTimestamp(
-      message,
-      signature,
-      wallet.address,
-      5 // 5 minutes max age
-    );
-
-    expect(isValid).toBe(true);
-    expect(error).toBeUndefined();
-  });
-
-  /**
-   * Test that expired timestamped signatures are rejected.
-   * Ensures the function enforces expiration windows.
-   */
-  it("should return false for expired timestamped signatures", async () => {
-    const wallet = new ethers.Wallet(
-      "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
-    );
-
-    // Create a message with an old timestamp (10 minutes ago)
-    const oldTimestamp = Date.now() - 10 * 60 * 1000;
-    const expiredMessage = `Sign this message to test-expired: [${oldTimestamp}]`;
-    const signature = await wallet.signMessage(expiredMessage);
-
-    const { isValid, error } = verifySignatureWithTimestamp(
-      expiredMessage,
-      signature,
-      wallet.address,
-      5 // 5 minutes max age - should reject the 10-minute old signature
-    );
-
-    expect(isValid).toBe(false);
-    expect(error).toBe("Message has expired");
-  });
-
-  /**
-   * Test that signatures with a future timestamp are rejected.
-   * Prevents accepting signatures that are not yet valid.
-   */
-  it("should return false for future timestamped signatures", async () => {
-    const wallet = new ethers.Wallet(
-      "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
-    );
-
-    // Create a message with a future timestamp (10 minutes from now)
-    const futureTimestamp = Date.now() + 10 * 60 * 1000;
-    const futureMessage = `Sign this message to test-future: [${futureTimestamp}]`;
-    const signature = await wallet.signMessage(futureMessage);
-
-    const { isValid, error } = verifySignatureWithTimestamp(
-      futureMessage,
-      signature,
-      wallet.address,
-      5 // 5 minutes max age
-    );
-
-    expect(isValid).toBe(false);
-    expect(error).toBe("Message timestamp is in the future");
-  });
-});
 
 // --- Address Validation ---
 // These tests check the Ethereum address validation utility for correct and incorrect formats.
-describe("Address Validation", () => {
-  /**
-   * Test that valid Ethereum addresses (checksummed and lowercase) are accepted,
-   * and invalid addresses (wrong length, non-hex, bad checksum, etc.) are rejected.
-   */
-  it("should return true for valid Ethereum address formats and false for invalid ones", () => {
-    // Valid addresses (ethers.js is strict about EIP-55 checksum)
-    const validAddresses = [
-      "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", // Mixed case (EIP-55 checksum)
-      "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266", // All lowercase (valid)
-    ];
+  describe("Address Validation", () => {
+    it("should return true for valid Ethereum address formats and false for invalid ones", () => {
+      // Valid addresses (ethers.js is strict about EIP-55 checksum)
+      const validAddresses = [
+        "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", // Mixed case (EIP-55 checksum)
+        "0x0000000000000000000000000000000000000000", // Zero address
+      ];
 
-    for (const address of validAddresses) {
-      expect(isValidEthereumAddress(address)).toBe(true);
-    }
+      for (const address of validAddresses) {
+        expect(ValidationUtils.isValidEthereumAddress(address, true)).toBe(true);
+      }
 
-    // Invalid addresses
-    const invalidAddresses = [
-      "0x123", // Too short
-      "not-an-address", // Not hex
-      "0xgggggggggggggggggggggggggggggggggggggggg", // Invalid hex characters
-      "", // Empty string
-      "0x", // Just prefix
-      "0XF39FD6E51AAD88F6F4CE6AB8827279CFFFB92266", // All uppercase (invalid EIP-55)
-    ];
+      // Invalid addresses
+      const invalidAddresses = [
+        "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266", // All lowercase (invalid EIP-55 if strict)
+        "0xF39FD6E51AAD88F6F4CE6AB8827279CFFFB92266", // All uppercase (invalid EIP-55 if strict)
+        "0x123", // Too short
+        "not-an-address", // Not hex
+        "0xgggggggggggggggggggggggggggggggggggggggg", // Invalid hex characters
+        "", // Empty string
+        "0x", // Just prefix
+        null, // null
+        undefined, // undefined
+      ];
 
-    for (const address of invalidAddresses) {
-      expect(isValidEthereumAddress(address)).toBe(false);
-    }
+      for (const address of invalidAddresses) {
+        expect(ValidationUtils.isValidEthereumAddress(address, true)).toBe(false);
+      }
+
+      // Test with non-strict checksum validation
+      const relaxedValidAddresses = [
+        "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+        "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266",
+        "0xF39FD6E51AAD88F6F4CE6AB8827279CFFFB92266",
+        "0x0000000000000000000000000000000000000000",
+      ];
+      for (const address of relaxedValidAddresses) {
+        expect(ValidationUtils.isValidEthereumAddress(address, false)).toBe(true);
+      }
+      const relaxedInvalidAddresses = [
+        "0x123",
+        "not-an-address",
+        "0xgggggggggggggggggggggggggggggggggggggggg",
+        "",
+        null,
+        undefined,
+      ];
+      for (const address of relaxedInvalidAddresses) {
+        // @ts-ignore
+        expect(ValidationUtils.isValidEthereumAddress(address, false)).toBe(false);
+      }
+    });
   });
-});

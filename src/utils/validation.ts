@@ -1,4 +1,6 @@
 import { sanitizeObject } from './sanitization';
+import { getAddress, isAddress } from 'ethers';
+import { validationConfig } from '../config/validation';
 
 /**
  * Validation utilities for request input
@@ -13,7 +15,7 @@ export interface WalletAuthInput {
 export interface ValidationResult {
   isValid: boolean;
   error?: string;
-  sanitizedInput?: any; // Add this line
+  sanitizedInput?: any;
 }
 
 export interface CommentInput {
@@ -29,13 +31,48 @@ export function isStringAndNotEmpty(value: any, minLength: number = 1, maxLength
 }
 
 /**
- * Validates Ethereum address format.
- * @param address - The Ethereum address string to validate.
- * @returns True if the address format is valid, false otherwise.
+ * Validates an Ethereum address against the EIP-55 checksum standard.
+ *
+ * @param address The Ethereum address string to validate.
+ * @param strict If true, only strictly checksummed addresses pass. If false,
+ *               all-lowercase or all-uppercase addresses are also considered valid
+ *               (though they will be normalized to checksummed format).
+ * @returns True if the address is valid according to EIP-55 (or relaxed rules), false otherwise.
  */
-export function isValidEthereumAddressFormat(address: string): boolean {
-  const addressRegex = /^0x[a-fA-F0-9]{40}$/;
-  return addressRegex.test(address);
+export function validateEIP55Checksum(address: string, strict: boolean = validationConfig.EIP55_CHECKSUM_VALIDATION_ENABLED): boolean {
+  if (!isStringAndNotEmpty(address)) {
+    return false;
+  }
+
+  // ethers.isAddress handles the basic format check (0x prefix, 40 hex chars)
+  // and also performs checksum validation.
+  // It returns the checksummed address if valid, or throws an error if invalid.
+  try {
+    const checksummedAddress = getAddress(address); // This will throw if the address is malformed or has an invalid checksum
+    if (strict) {
+      // In strict mode, the original address must exactly match the checksummed version
+      return address === checksummedAddress;
+    }
+    // In non-strict mode, as long as it's a valid address that *could* be checksummed, it passes.
+    // ethers.isAddress implicitly handles this by returning the checksummed version or throwing.
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
+/**
+ * Validates an Ethereum address, including format and optional EIP-55 checksum.
+ * This function replaces the previous isValidEthereumAddressFormat and incorporates checksum validation.
+ *
+ * @param address The Ethereum address string to validate.
+ * @param strictChecksum If true, enforces strict EIP-55 checksum validation.
+ *                       If false, allows all-lowercase or all-uppercase addresses.
+ * @returns True if the address is valid, false otherwise.
+ */
+export function isValidEthereumAddress(address: string, strictChecksum: boolean = validationConfig.EIP55_CHECKSUM_VALIDATION_ENABLED): boolean {
+  // Directly use validateEIP55Checksum which internally handles format and checksum validation
+  return validateEIP55Checksum(address, strictChecksum);
 }
 
 /**
@@ -106,14 +143,20 @@ function _validateWalletPayload(payload: any): ValidationResult {
   }
 
   // Validate formats
-  if (!isValidEthereumAddressFormat(walletAddress)) {
-    return { isValid: false, error: "Invalid Ethereum wallet address format" };
+  if (!isValidEthereumAddress(walletAddress)) {
+    return { isValid: false, error: "Invalid Ethereum wallet address format. Please ensure it is a valid 0x-prefixed 40-character hexadecimal address." };
+  }
+  if (validationConfig.EIP55_CHECKSUM_VALIDATION_ENABLED && !validateEIP55Checksum(walletAddress, true)) {
+    return { isValid: false, error: "Invalid Ethereum wallet address. Please ensure it is a valid 0x-prefixed 40-character hexadecimal address, and if strict checksum validation is enabled, that it is EIP-55 checksummed." };
   }
   if (!isValidEthereumSignatureFormat(signature)) {
     return { isValid: false, error: "Invalid signature format. Must be a valid Ethereum signature (0x + 130 hex chars)" };
   }
 
-  return { isValid: true, sanitizedInput: sanitizedPayload };
+  // Normalize walletAddress to checksummed format before returning
+  const normalizedWalletAddress = getAddress(walletAddress);
+
+  return { isValid: true, sanitizedInput: { ...sanitizedPayload, walletAddress: normalizedWalletAddress } };
 }
 
 /**

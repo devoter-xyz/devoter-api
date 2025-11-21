@@ -1,5 +1,7 @@
 import { ethers } from "ethers";
 import * as crypto from 'crypto';
+import { isValidEthereumAddress } from './validation';
+import { validationConfig } from '../config/validation';
 
 /**
  * Verifies that a message was signed by the specified wallet address
@@ -44,17 +46,23 @@ export function verifySignature(
   if (!trimmedSignature) {
     return { isValid: false, error: "Signature cannot be empty or just whitespace" };
   }
-  if (!trimmedWalletAddress) {
-    return { isValid: false, error: "Wallet address cannot be empty or just whitespace" };
+
+  // Validate the wallet address format and checksum before proceeding
+  if (!isValidEthereumAddress(walletAddress, validationConfig.EIP55_CHECKSUM_VALIDATION_ENABLED)) {
+    return { isValid: false, error: "Invalid Ethereum wallet address provided." };
   }
+
+  const checksummedWalletAddress = ethers.getAddress(walletAddress.trim());
 
   try {
     // Recover the address from the signature
     const recoveredAddress = ethers.verifyMessage(trimmedMessage, trimmedSignature);
+    console.log("Recovered Address:", recoveredAddress);
+    console.log("Checksummed Wallet Address:", checksummedWalletAddress);
 
     // Convert addresses to buffers for timing-safe comparison
     const recoveredBuffer = Buffer.from(recoveredAddress.toLowerCase());
-    const walletBuffer = Buffer.from(trimmedWalletAddress.toLowerCase());
+    const walletBuffer = Buffer.from(checksummedWalletAddress.toLowerCase());
 
     // Ensure buffers are of the same length to prevent timing leaks
     // Pad with a non-matching character if lengths differ to maintain timing safety
@@ -65,8 +73,11 @@ export function verifySignature(
     recoveredBuffer.copy(paddedRecovered);
     walletBuffer.copy(paddedWallet);
 
+    const isMatch = crypto.timingSafeEqual(paddedRecovered, paddedWallet);
+    console.log("Addresses match (timingSafeEqual):", isMatch);
+
     // Compare addresses using timing-safe comparison
-    if (crypto.timingSafeEqual(paddedRecovered, paddedWallet)) {
+    if (isMatch) {
       return { isValid: true };
     } else {
       return { isValid: false, error: "Signature does not match the provided wallet address" };
@@ -163,19 +174,3 @@ export function generateSignMessage(purpose: string): string {
   return `Sign this message to ${purpose}: [${timestamp}]`;
 }
 
-/**
- * Validates Ethereum address format
- * @param address - The address to validate
- * @returns boolean - True if valid address format
- */
-export function isValidEthereumAddress(address: string): boolean {
-  try {
-    // Explicitly check for '0x' prefix first
-    if (typeof address !== 'string' || !address.startsWith('0x')) {
-      return false;
-    }
-    return ethers.isAddress(address);
-  } catch {
-    return false;
-  }
-}
