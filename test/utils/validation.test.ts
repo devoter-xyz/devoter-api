@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { validateWalletAuthInput, isValidEthereumSignatureFormat, isValidEthereumAddressFormat, validateCommentInput } from '../../src/utils/validation';
+import { validateWalletAuthInput, isValidEthereumSignatureFormat, isValidEthereumAddress, validateEIP55Checksum, validateCommentInput } from '../../src/utils/validation';
 
 describe('Input Validation', () => {
   describe('validateWalletAuthInput', () => {
@@ -89,7 +89,7 @@ describe('Input Validation', () => {
         };
         const result = validateWalletAuthInput(input);
         expect(result.isValid).toBe(false);
-        expect(result.error).toBe('Invalid Ethereum wallet address format');
+        expect(result.error).toBe("Invalid Ethereum wallet address format. Please ensure it is a valid 0x-prefixed 40-character hexadecimal address.")
       });
     });
 
@@ -349,32 +349,4 @@ describe('Input Validation', () => {
     });
   });
 
-  describe('isValidEthereumAddressFormat', () => {
-  it('should return true for valid Ethereum address format', () => {
-      const validAddresses = [
-        '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266', // Mixed case
-        '0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266', // Lowercase
-        '0xF39FD6E51AAD88F6F4CE6AB8827279CFFFB92266' // Uppercase
-      ];
-      
-      validAddresses.forEach(address => {
-        expect(isValidEthereumAddressFormat(address)).toBe(true);
-      });
-    });
-
-  it('should return false for invalid Ethereum address formats', () => {
-      const invalidAddresses = [
-        '0x123', // Too short
-        'not-an-address', // Not hex
-        '0xgggggggggggggggggggggggggggggggggggggggg', // Invalid hex
-        '', // Empty string
-        '0x', // Just prefix
-        '0x1234' // Too short hex
-      ];
-      
-      invalidAddresses.forEach(address => {
-        expect(isValidEthereumAddressFormat(address)).toBe(false);
-      });
-    });
   });
-});

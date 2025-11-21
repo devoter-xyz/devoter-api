@@ -1,19 +1,16 @@
-
-// Import test utilities from Vitest
 import { describe, it, expect } from "vitest";
 
 // Import address validation utilities
-import { isValidEthereumAddressFormat } from "../../src/utils/validation";
-import { isValidEthereumAddress } from "../../src/utils/verifySignature";
+import { isValidEthereumAddress, validateEIP55Checksum } from "../../src/utils/validation";
+import { validationConfig } from "../../src/config/validation";
 
 // Test suite for Ethereum address validation utilities
 describe("Ethereum Address Validation", () => {
-  // Tests for the validateAddressFormat function (simple regex check)
-  describe("isValidEthereumAddressFormat", () => {
-  // Should validate correct Ethereum address formats (regex only)
-  it("should return true for valid Ethereum address format (regex only)", () => {
+  // Tests for the isValidEthereumAddress function (format and optional checksum)
+  describe("isValidEthereumAddress", () => {
+    it("should return true for valid Ethereum address format (non-strict checksum)", () => {
       const validAddresses = [
-        "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", // Mixed case
+        "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", // Mixed case (checksummed)
         "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266", // Lowercase
         "0xF39FD6E51AAD88F6F4CE6AB8827279CFFFB92266", // Uppercase
         "0x0000000000000000000000000000000000000000", // Zero address
@@ -21,58 +18,36 @@ describe("Ethereum Address Validation", () => {
       ];
 
       validAddresses.forEach((address) => {
-        expect(isValidEthereumAddressFormat(address)).toBe(true);
+        expect(isValidEthereumAddress(address, false)).toBe(true); // Non-strict checksum
       });
     });
 
-  // Should reject invalid Ethereum address formats (regex only)
-  it("should return false for invalid Ethereum address formats (regex only)", () => {
-      const invalidAddresses = [
-        "0x123", // Too short
-        "not-an-address", // Not hex
-        "0xgggggggggggggggggggggggggggggggggggggggg", // Invalid hex
-        "", // Empty string
-        "0x", // Just prefix
-        "0x1234", // Too short hex
-        "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb9226", // 39 chars after 0x
-        "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266a", // 41 chars after 0x
-        "1xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", // Wrong prefix
-        "f39Fd6e51aad88F6F4ce6aB8827279cffFb92266", // No prefix
-        null, // null
-        undefined, // undefined
-      ];
-
-      invalidAddresses.forEach((address) => {
-        // @ts-ignore - Testing invalid types
-        expect(isValidEthereumAddressFormat(address)).toBe(false);
-      });
-    });
-  });
-
-  // Tests for the isValidEthereumAddress function (checksum and format)
-  describe("isValidEthereumAddress", () => {
-  // Should validate correct Ethereum addresses, including checksummed, zero, and case-insensitive
-  it("should return true for valid Ethereum addresses (checksum, zero, case-insensitive)", () => {
-      const validAddresses = [
-        // Valid checksummed addresses
+    it("should return true for valid EIP-55 checksummed addresses (strict checksum)", () => {
+      const validChecksummedAddresses = [
         "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
         "0x5B38Da6a701c568545dCfcB03FcB875f56beddC4",
         "0xAb8483F64d9C6d1EcF9b849Ae677dD3315835cb2",
-        // Zero address
-        "0x0000000000000000000000000000000000000000",
-        // All uppercase (valid but not checksummed)
-        "0xF39FD6E51AAD88F6F4CE6AB8827279CFFFB92266",
-        // All lowercase (valid but not checksummed)
-        "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266",
+        "0x0000000000000000000000000000000000000000", // Zero address is always valid
       ];
 
-      validAddresses.forEach((address) => {
-        expect(isValidEthereumAddress(address)).toBe(true);
+      validChecksummedAddresses.forEach((address) => {
+        expect(isValidEthereumAddress(address, true)).toBe(true); // Strict checksum
       });
     });
 
-  // Should reject invalid Ethereum addresses (bad format, prefix, or type)
-  it("should return false for invalid Ethereum addresses (bad format, prefix, or type)", () => {
+    it("should return false for non-checksummed addresses when strict checksum is enabled", () => {
+      const nonChecksummedAddresses = [
+        "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266", // Lowercase
+        "0xF39FD6E51AAD88F6F4CE6AB8827279CFFFB92266", // Uppercase
+        "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92265", // Invalid checksum (one char off)
+      ];
+
+      nonChecksummedAddresses.forEach((address) => {
+        expect(isValidEthereumAddress(address, true)).toBe(false); // Strict checksum
+      });
+    });
+
+    it("should return false for invalid Ethereum address formats", () => {
       const invalidAddresses = [
         "0x123", // Too short
         "not-an-address", // Not hex
@@ -89,20 +64,11 @@ describe("Ethereum Address Validation", () => {
 
       invalidAddresses.forEach((address) => {
         // @ts-ignore - Testing invalid types
-        const result = isValidEthereumAddress(address);
-        console.log(`Address: ${address}, Result: ${result}`);
-        expect(result).toBe(false);
+        expect(isValidEthereumAddress(address)).toBe(false);
       });
-
-      // Note: ethers.isAddress requires the '0x' prefix; addresses without it are invalid
-      // This differs from validateAddressFormat's regex-only behavior; test explicitly:
-      const addressWithoutPrefix = "f39Fd6e51aad88F6F4ce6aB8827279cffFb92266";
-      expect(isValidEthereumAddress(addressWithoutPrefix)).toBe(false);
     });
 
-  // Should handle edge cases (empty, null, undefined, non-string)
-  it("should return false for edge cases (empty, null, undefined, non-string)", () => {
-      // These should be invalid
+    it("should handle edge cases (empty, null, undefined, non-string)", () => {
       expect(isValidEthereumAddress("")).toBe(false);
       expect(isValidEthereumAddress("0x")).toBe(false);
       // @ts-ignore - Testing invalid types
@@ -116,28 +82,83 @@ describe("Ethereum Address Validation", () => {
     });
   });
 
-  // Comparison tests between validateAddressFormat and isValidEthereumAddress
-  describe("Comparison between validation functions", () => {
-  // Should show differences between simple regex and ethers.js validation
-  it("should compare simple regex and ethers.js validation for Ethereum addresses", () => {
-      // Both functions should accept valid addresses
-      const validAddress = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266";
-      expect(isValidEthereumAddressFormat(validAddress)).toBe(true);
-      expect(isValidEthereumAddress(validAddress)).toBe(true);
+  // Tests for the validateEIP55Checksum function
+  describe("validateEIP55Checksum", () => {
+    it("should return true for valid EIP-55 checksummed addresses (strict mode)", () => {
+      const validChecksummedAddresses = [
+        "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+        "0x5B38Da6a701c568545dCfcB03FcB875f56beddC4",
+        "0xAb8483F64d9C6d1EcF9b849Ae677dD3315835cb2",
+        "0x0000000000000000000000000000000000000000",
+      ];
 
-      // Both functions should reject clearly invalid addresses
-      const invalidAddress = "0x123";
-      expect(isValidEthereumAddressFormat(invalidAddress)).toBe(false);
-      expect(isValidEthereumAddress(invalidAddress)).toBe(false);
+      validChecksummedAddresses.forEach((address) => {
+        expect(validateEIP55Checksum(address, true)).toBe(true);
+      });
+    });
 
-      // The regex validation doesn't check for checksum validity
-      // It only checks the format (0x  40 hex chars)
-      const invalidChecksumAddress =
-        "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266".replace("f", "F");
-      // This would pass the simple regex check
-      expect(isValidEthereumAddressFormat(invalidChecksumAddress)).toBe(true);
-      // But ethers.isAddress would reject it if it had an invalid checksum
-      // In a real implementation, we should use isValidEthereumAddress for complete validation
+    it("should return false for non-checksummed addresses when strict mode is enabled", () => {
+      const nonChecksummedAddresses = [
+        "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266", // Lowercase
+        "0xF39FD6E51AAD88F6F4CE6AB8827279CFFFB92266", // Uppercase
+        "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92265", // Invalid checksum (one char off)
+      ];
+
+      nonChecksummedAddresses.forEach((address) => {
+        expect(validateEIP55Checksum(address, true)).toBe(false);
+      });
+    });
+
+    it("should return true for all-lowercase or all-uppercase addresses when strict mode is disabled", () => {
+      const relaxedAddresses = [
+        "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266", // Lowercase
+        "0xF39FD6E51AAD88F6F4CE6AB8827279CFFFB92266", // Uppercase
+        "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", // Checksummed
+      ];
+
+      relaxedAddresses.forEach((address) => {
+        expect(validateEIP55Checksum(address, false)).toBe(true);
+      });
+    });
+
+    it("should return false for invalid address formats (strict or non-strict)", () => {
+      const invalidFormats = [
+        "0x123",
+        "not-an-address",
+        "0xgggggggggggggggggggggggggggggggggggggggg",
+        "",
+        null,
+        undefined,
+      ];
+
+      invalidFormats.forEach((address) => {
+        // @ts-ignore
+        expect(validateEIP55Checksum(address, true)).toBe(false);
+        // @ts-ignore
+        expect(validateEIP55Checksum(address, false)).toBe(false);
+      });
+    });
+  });
+
+  // Test for default configuration behavior
+  describe("Default Checksum Validation Behavior", () => {
+    it("should use the default EIP55_CHECKSUM_VALIDATION_ENABLED setting", () => {
+      // Assuming validationConfig.EIP55_CHECKSUM_VALIDATION_ENABLED is true by default
+      const validChecksummed = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266";
+      const lowercaseAddress = "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266";
+
+      // When no strictChecksum is provided, it should use the default config
+      if (validationConfig.EIP55_CHECKSUM_VALIDATION_ENABLED) {
+        expect(isValidEthereumAddress(validChecksummed)).toBe(true);
+        expect(isValidEthereumAddress(lowercaseAddress)).toBe(false);
+        expect(validateEIP55Checksum(validChecksummed)).toBe(true);
+        expect(validateEIP55Checksum(lowercaseAddress)).toBe(false);
+      } else {
+        expect(isValidEthereumAddress(validChecksummed)).toBe(true);
+        expect(isValidEthereumAddress(lowercaseAddress)).toBe(true);
+        expect(validateEIP55Checksum(validChecksummed)).toBe(true);
+        expect(validateEIP55Checksum(lowercaseAddress)).toBe(true);
+      }
     });
   });
 });
