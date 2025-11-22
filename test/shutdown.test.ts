@@ -3,7 +3,7 @@ import { build } from '../src/server';
 import { getEnv } from '../src/config/env';
 import type { FastifyInstance } from 'fastify';
 import { replayProtectionCache } from '../src/lib/replayProtectionCache';
-import { clearRateLimitAnalytics } from '../src/lib/rateLimitAnalytics';
+import * as rateLimitAnalytics from '../src/lib/rateLimitAnalytics';
 
 // Mock process.exit to prevent actual process termination during tests
 const mockExit = vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
@@ -34,7 +34,7 @@ const sendSignal = (signal: 'SIGTERM' | 'SIGINT') => {
 test('should gracefully shut down the server on SIGTERM', async () => {
   const serverCloseSpy = vi.spyOn(server, 'close');
   const replayProtectionCacheStopCleanupSpy = vi.spyOn(replayProtectionCache, 'stopCleanup');
-  const clearRateLimitAnalyticsSpy = vi.spyOn(clearRateLimitAnalytics, 'clearRateLimitAnalytics');
+  const clearRateLimitAnalyticsSpy = vi.spyOn(rateLimitAnalytics, 'clearRateLimitAnalytics');
 
   const shutdownPromise = new Promise<void>((resolve) => {
     server.addHook('onClose', () => {
@@ -68,7 +68,7 @@ test('should reject new requests during shutdown', async () => {
   sendSignal('SIGTERM');
 
   // Try to send a new request immediately after shutdown signal
-  const newRequestPromise = fetch(`http://${host}:${port}/health`);
+  const newRequestPromise = fetch(`http://${host}:${port}/health/ready`);
 
   // Expect the long-running request to complete successfully
   const longRequestResponse = await longRequestPromise;

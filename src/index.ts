@@ -62,6 +62,8 @@ if (env.NODE_ENV !== "test") {
         server.log.error({ err }, "Error during graceful shutdown.");
         clearTimeout(forceShutdownTimeout);
         process.exit(1);
+      } finally {
+        isShuttingDown = false; // Reset the flag
       }
     };
 
@@ -70,14 +72,13 @@ if (env.NODE_ENV !== "test") {
       const port = env.PORT;
       const host = env.HOST;
 
-      // Start the Fastify server and listen on the specified host and port
-      await server.listen({ port, host });
-      server.log.info(`🚀 Server listening at http://${host}:${port} in ${env.NODE_ENV} mode`);
-
       const signals = ["SIGINT", "SIGTERM"];
       signals.forEach((signal) => {
         process.on(signal, () => gracefulShutdown(signal));
       });
+
+      // Start the Fastify server and listen on the specified host and port
+      await server.listen({ port, host });
 
     } catch (err) {
       // Log startup errors and exit process with failure code

@@ -6,7 +6,7 @@ export const envSchema = z.object({
   HOST: z.string().default('localhost'),
   DATABASE_URL: z.string().url(),
   API_KEY_SECRET: z.string().min(32).default(process.env.NODE_ENV === 'test' ? 'test-api-key-secret-for-devoter-api' : ''),
-  SHUTDOWN_TIMEOUT_SECONDS: z.coerce.number().default(30),
+  SHUTDOWN_TIMEOUT_SECONDS: z.coerce.number().min(1).default(30),
   // Add other environment variables as needed
 });
 
