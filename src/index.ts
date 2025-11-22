@@ -2,9 +2,12 @@
 import fastify from "fastify";
 import { config } from "dotenv";
 import { build } from "./server.js";
+import { getEnv } from "./config/env";
 
 // Load environment variables from .env file into process.env
 config();
+
+const env = getEnv();
 
 /**
  * Starts the Fastify server with all middleware, plugins, and routes registered.
@@ -12,24 +15,17 @@ config();
  */
 import type { FastifyInstance } from "fastify";
 
-if (process.env.NODE_ENV !== "test") {
+if (env.NODE_ENV !== "test") {
   const start = async () => {
     let server: FastifyInstance;
     try {
       server = await build();
-      // Parse and validate the port from environment variables (default: 3000)
-      const portStr = process.env.PORT || "3000";
-      const port = Number(portStr);
-      if (isNaN(port) || port <= 0 || !Number.isInteger(port)) {
-        server.log.error(`Invalid PORT environment variable: '${portStr}'. Must be a positive integer.`);
-        process.exit(1);
-      }
-      // Parse the host from environment variables (default: localhost)
-      const host = process.env.HOST || "localhost";
+      const port = env.PORT;
+      const host = env.HOST;
 
       // Start the Fastify server and listen on the specified host and port
       await server.listen({ port, host });
-      server.log.info(`🚀 Server listening at http://${host}:${port} in ${process.env.NODE_ENV} mode`);
+      server.log.info(`🚀 Server listening at http://${host}:${port} in ${env.NODE_ENV} mode`);
 
       const signals = ["SIGINT", "SIGTERM"];
       signals.forEach((signal) => {

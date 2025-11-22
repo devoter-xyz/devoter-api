@@ -75,14 +75,7 @@ export async function build() {
     allowErrorHandlerOverride: true,
   });
 
-  // Validate required environment variables
-  const requiredEnvVars = ["NODE_ENV", "DATABASE_URL", "PORT", "HOST"];
-  for (const envVar of requiredEnvVars) {
-    if (!process.env[envVar]) {
-      server.log.error(`Configuration Error: Missing required environment variable '${envVar}'. Please ensure it is set in your .env file or environment.`);
-      process.exit(1);
-    }
-  }
+
 
   validateCorsConfig();
 
