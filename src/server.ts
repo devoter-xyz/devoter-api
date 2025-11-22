@@ -25,6 +25,8 @@ import { getRateLimitAnalytics } from "./lib/rateLimitAnalytics.js";
 import { recordApiKeyUsage } from "./lib/apiKeyUsageTracker.js";
 import docGenerator from "./utils/docGenerator.js";
 
+import { isShuttingDown } from "./index.js";
+
 config();
 
 declare module 'fastify' {
@@ -132,6 +134,10 @@ export async function build() {
 
   // Readiness probe
   server.get("/health/ready", async (request, reply) => {
+    if (isShuttingDown) {
+      return reply.status(503).send({ status: "service unavailable", message: "Server is shutting down." });
+    }
+
     const dbStatus = await checkDatabaseConnection();
     const isReady = dbStatus.status === "ok";
 

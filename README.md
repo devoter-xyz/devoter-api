@@ -89,6 +89,22 @@ pnpm build
 pnpm start
 ```
 
+### Graceful Shutdown
+
+The API implements a comprehensive graceful shutdown process to ensure minimal disruption and data integrity during restarts or deployments. Upon receiving a `SIGINT` or `SIGTERM` signal, the server initiates the following sequence:
+
+1.  **Connection Draining**: The server stops accepting new incoming requests but continues to process existing, in-flight requests.
+2.  **Readiness Probe**: The `/health/ready` endpoint will immediately begin returning a `503 Service Unavailable` status, signaling to load balancers or orchestrators (e.g., Kubernetes) that the instance is no longer ready to receive traffic.
+3.  **Configurable Timeout**: A configurable timeout (defaulting to `SHUTDOWN_TIMEOUT_SECONDS` from environment variables, 30 seconds) is started. If existing connections or cleanup tasks do not complete within this period, the server will forcefully terminate.
+4.  **Resource Cleanup**: Hooks are triggered to gracefully shut down and clean up various resources:
+    *   **Prisma Connections**: The Prisma client disconnects from the database.
+    *   **Rate Limit Cache**: The internal cleanup interval for the replay protection cache is stopped.
+    *   **Rate Limit Analytics**: In-memory rate limit analytics are cleared.
+    *   **Other Intervals/Timeouts**: Any other active `setInterval` or `setTimeout` operations should be cleared.
+5.  **Process Exit**: Once all connections are drained and resources are cleaned up (or the timeout is reached), the process exits.
+
+This ensures that ongoing operations have a chance to complete, and the server can be safely removed from a service mesh without dropping requests.
+
 ---
 
 ## ⚡ API Documentation
