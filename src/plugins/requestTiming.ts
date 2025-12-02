@@ -1,5 +1,6 @@
 
 import type { FastifyPluginAsync } from 'fastify';
+import fp from 'fastify-plugin';
 import * as hdr from 'hdr-histogram-js';
 
 declare module 'fastify' {
@@ -8,7 +9,7 @@ declare module 'fastify' {
   }
 }
 
-interface MetricsSnapshot {
+export interface MetricsSnapshot {
   totalRequests: number;
   p50: string;
   p95: string;
@@ -20,29 +21,33 @@ interface MetricsSnapshot {
 const SLOW_REQUEST_THRESHOLD_MS = 500;
 const METRICS_RESET_INTERVAL_MS = 3600 * 1000; // 1 hour
 
-let totalRequests = 0;
-const histogram = hdr.build({ lowestDiscernibleValue: 1, highestTrackableValue: 60000, numberOfSignificantValueDigits: 3 }); // min, max, significant figures
-const metricsQueue: number[] = [];
-let processingQueue = false;
+interface RequestTimingPluginOptions {
+  getHrtime?: () => bigint;
+}
 
-const processMetricsQueue = () => {
-  if (processingQueue) {
-    return;
-  }
-  processingQueue = true;
-  process.nextTick(() => {
-    while (metricsQueue.length > 0) {
-      const duration = metricsQueue.shift();
-      if (duration !== undefined) {
-        histogram.recordValue(duration);
-        totalRequests++;
-      }
+const requestTimingPluginFunction: FastifyPluginAsync<RequestTimingPluginOptions> = async (fastify, opts) => {
+  let totalRequests = 0;
+  const histogram = hdr.build({ lowestDiscernibleValue: 1, highestTrackableValue: 60000, numberOfSignificantValueDigits: 3 }); // min, max, significant figures
+  const metricsQueue: number[] = [];
+  let processingQueue = false;
+
+  const processMetricsQueue = () => {
+    if (processingQueue) {
+      return;
     }
-    processingQueue = false;
-  });
-};
+    processingQueue = true;
+    process.nextTick(() => {
+      while (metricsQueue.length > 0) {
+        const duration = metricsQueue.shift();
+        if (duration !== undefined) {
+          histogram.recordValue(duration);
+          totalRequests++;
+        }
+      }
+      processingQueue = false;
+    });
+  };
 
-const requestTimingPlugin: FastifyPluginAsync = async (fastify) => {
   // Schedule periodic reset of metrics
   const resetInterval = setInterval(() => {
     histogram.reset();
@@ -56,15 +61,31 @@ const requestTimingPlugin: FastifyPluginAsync = async (fastify) => {
     done();
   });
 
+  const getHrtime = opts.getHrtime || process.hrtime.bigint;
+
   fastify.decorateRequest('hrtime', null);
 
+  const getMetricsSnapshot = (): MetricsSnapshot => {
+    const p50 = histogram.getValueAtPercentile(50);
+    const p95 = histogram.getValueAtPercentile(95);
+
+    return {
+      totalRequests,
+      p50: p50.toFixed(2),
+      p95: p95.toFixed(2),
+      simpleP50: 'N/A', // Removed simple percentile calculation
+      simpleP95: 'N/A', // Removed simple percentile calculation
+      windowSize: histogram.totalCount,
+    };
+  };
+
   fastify.addHook('onRequest', async (request, reply) => {
-    request.hrtime = process.hrtime.bigint();
+    request.hrtime = getHrtime();
   });
 
   fastify.addHook('onSend', async (request, reply, payload) => {
     const start = request.hrtime as bigint;
-    const end = process.hrtime.bigint();
+    const end = getHrtime();
     const duration = Number(end - start) / 1_000_000; // Convert nanoseconds to milliseconds
 
     metricsQueue.push(duration);
@@ -93,19 +114,7 @@ const requestTimingPlugin: FastifyPluginAsync = async (fastify) => {
     return payload;
   });
 
-  fastify.decorate('getMetricsSnapshot', (): MetricsSnapshot => {
-    const p50 = histogram.getValueAtPercentile(50);
-    const p95 = histogram.getValueAtPercentile(95);
-
-    return {
-      totalRequests,
-      p50: p50.toFixed(2),
-      p95: p95.toFixed(2),
-      simpleP50: 'N/A', // Removed simple percentile calculation
-      simpleP95: 'N/A', // Removed simple percentile calculation
-      windowSize: histogram.totalCount,
-    };
-  });
+  fastify.decorate('getMetricsSnapshot', getMetricsSnapshot);
 };
 
-export default requestTimingPlugin;
+export default fp(requestTimingPluginFunction);
