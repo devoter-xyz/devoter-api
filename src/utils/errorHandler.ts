@@ -36,7 +36,6 @@ export class ApiError extends Error {
   code: string;
   details?: Record<string, any>;
   correlationId?: string; // Optional: A unique ID to track the error across systems
-  stack?: string; // Optional: Stack trace for debugging in non-production environments
 
   constructor(
     statusCode: HttpStatusCode,
@@ -51,7 +50,9 @@ export class ApiError extends Error {
     this.code = code;
     this.details = details || {}; // Default to empty object if undefined
     this.correlationId = correlationId;
-    this.stack = stack; // Assign the stack trace
+    if (stack !== undefined) {
+      this.stack = stack;
+    } // Assign the stack trace only if it's not undefined
     Object.setPrototypeOf(this, ApiError.prototype);
   }
 
