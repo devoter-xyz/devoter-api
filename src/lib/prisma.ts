@@ -19,13 +19,13 @@ async function initializePrismaWithRetries(retries = MAX_RETRIES): Promise<Prism
     await client.$connect();
     console.log("Prisma client connected successfully.");
     return client;
-  } catch (error) {
+  } catch (error: unknown) {
     if (retries > 0) {
       console.warn(`Prisma client connection failed. Retrying in ${RETRY_DELAY_MS / 1000} seconds... (${retries} retries left)`);
       await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS));
       return initializePrismaWithRetries(retries - 1);
     } else {
-      console.error("Failed to connect Prisma client after multiple retries.", error);
+      console.error("Failed to connect Prisma client after multiple retries.", error instanceof Error ? error.message : error);
       throw error;
     }
   }
@@ -37,7 +37,7 @@ if (process.env.NODE_ENV !== "production") {
   globalForPrisma.prisma = prisma;
 }
 
-export const prismaPlugin: FastifyPluginAsync = async (server) => {
+export const prismaPlugin: FastifyPluginAsync<Record<never, never>, Server, TypeProvider, Logger, PrismaClient> = async (server) => {
   server.decorate("prisma", prisma);
   server.addHook("onClose", async () => {
     server.log.info("Disconnecting Prisma client...");
