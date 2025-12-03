@@ -1,4 +1,3 @@
-/*
 import type { FastifyInstance } from "fastify";
 import { verifyWalletSignature } from "../middleware/auth.js";
 import { rateLimitConfigs } from "../middleware/rateLimit.js";
@@ -53,7 +52,6 @@ export default async function pollsRoute(fastify: FastifyInstance) {
     if (!user) {
       throw new ApiError(HttpStatusCode.NOT_FOUND, "User not found");
     }
-
     // Create poll
     const poll = await prisma.poll.create({
       data: {
@@ -241,4 +239,3 @@ export default async function pollsRoute(fastify: FastifyInstance) {
     });
   }));
 }
-*/
