@@ -197,6 +197,30 @@ import {
     expect(result.error).toBe("Message cannot be empty or just whitespace");
   });
 
+  it("should return false and an error for whitespace-only message", () => {
+    const walletAddress = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266";
+    const signature = "0x...some-valid-signature..."; // Placeholder
+    const result = verifySignature("   ", signature, walletAddress);
+    expect(result.isValid).toBe(false);
+    expect(result.error).toBe("Message cannot be empty or just whitespace");
+  });
+
+  it("should return false and an error for whitespace-only signature", () => {
+    const walletAddress = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266";
+    const message = "Test message";
+    const result = verifySignature(message, "   ", walletAddress);
+    expect(result.isValid).toBe(false);
+    expect(result.error).toBe("Signature cannot be empty or just whitespace");
+  });
+
+  it("should return false and an error for whitespace-only wallet address", () => {
+    const message = "Test message";
+    const signature = "0x...some-valid-signature..."; // Placeholder
+    const result = verifySignature(message, signature, "   ");
+    expect(result.isValid).toBe(false);
+    expect(result.error).toBe("Invalid Ethereum wallet address provided.");
+  });
+
       it("should return false and an error for empty wallet address", async () => {
         const wallet = new ethers.Wallet(
           "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
@@ -291,6 +315,69 @@ import {
       );
       expect(isValid).toBe(false);
       expect(error).toBe("Message timestamp is in the future");
+    });
+
+    it("should return false for messages with malformed timestamp format", async () => {
+      // Message with non-13 digit timestamp
+      const malformedMessageShort = `Sign this message to ${purpose}: [12345]`;
+      const malformedSignatureShort = await wallet.signMessage(malformedMessageShort);
+      let { isValid, error } = verifySignatureWithTimestamp(
+        malformedMessageShort,
+        malformedSignatureShort,
+        wallet.address,
+        maxAgeMinutes
+      );
+      expect(isValid).toBe(false);
+      expect(error).toBe("No timestamp found in message");
+
+      // Message with non-numeric timestamp
+      const malformedMessageAlpha = `Sign this message to ${purpose}: [abcdef12345]`;
+      const malformedSignatureAlpha = await wallet.signMessage(malformedMessageAlpha);
+      ({ isValid, error } = verifySignatureWithTimestamp(
+        malformedMessageAlpha,
+        malformedSignatureAlpha,
+        wallet.address,
+        maxAgeMinutes
+      ));
+      expect(isValid).toBe(false);
+      expect(error).toBe("No timestamp found in message");
+    });
+
+    it("should return false for messages without a timestamp block", async () => {
+      const noTimestampMessage = `Sign this message to ${purpose}`;
+      const noTimestampSignature = await wallet.signMessage(noTimestampMessage);
+      const { isValid, error } = verifySignatureWithTimestamp(
+        noTimestampMessage,
+        noTimestampSignature,
+        wallet.address,
+        maxAgeMinutes
+      );
+      expect(isValid).toBe(false);
+      expect(error).toBe("No timestamp found in message");
+    });
+
+    it("should propagate errors from underlying verifySignature call", async () => {
+      // Use an invalid signature
+      const invalidSignature = "0xdeadbeef";
+      const { isValid, error } = verifySignatureWithTimestamp(
+        message,
+        invalidSignature,
+        wallet.address,
+        maxAgeMinutes
+      );
+      expect(isValid).toBe(false);
+      expect(error).toContain("Signature verification failed");
+
+      // Use an invalid wallet address
+      const invalidWalletAddress = "0x123";
+      const { isValid: invalidAddressIsValid, error: invalidAddressError } = verifySignatureWithTimestamp(
+        message,
+        signature,
+        invalidWalletAddress,
+        maxAgeMinutes
+      );
+      expect(invalidAddressIsValid).toBe(false);
+      expect(invalidAddressError).toBe("Invalid Ethereum wallet address provided.");
     });
   });
 
