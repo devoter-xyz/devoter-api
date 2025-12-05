@@ -4,6 +4,10 @@ import { requestIdMiddleware } from '../../src/middleware/requestId.js';
 import errorPlugin from '../../src/plugins/errorPlugin.js';
 import { ApiError, HttpStatusCode } from '../../src/utils/errorHandler.js';
 
+vi.mock('uuid', () => ({
+  v4: () => 'mock-uuid-v4',
+}));
+
 describe('requestIdMiddleware', () => {
   let fastify: ReturnType<typeof Fastify>;
 
@@ -35,8 +39,7 @@ describe('requestIdMiddleware', () => {
       url: '/',
     });
 
-    expect(response.headers['x-request-id']).toBeDefined();
-    expect(typeof response.headers['x-request-id']).toBe('string');
+    expect(response.headers['x-request-id']).toBe('mock-uuid-v4');
   });
 
   it('should make request.id accessible and consistent with X-Request-ID header', async () => {
@@ -48,8 +51,8 @@ describe('requestIdMiddleware', () => {
     const payload = JSON.parse(response.payload);
     const requestIdFromHeader = response.headers['x-request-id'];
 
-    expect(payload.requestId).toBeDefined();
-    expect(payload.requestId).toBe(requestIdFromHeader);
+    expect(payload.requestId).toBe('mock-uuid-v4');
+    expect(requestIdFromHeader).toBe('mock-uuid-v4');
   });
 
   it('should include request ID in error responses', async () => {
@@ -62,7 +65,7 @@ describe('requestIdMiddleware', () => {
     const requestIdFromHeader = response.headers['x-request-id'];
 
     expect(response.statusCode).toBe(HttpStatusCode.INTERNAL_SERVER_ERROR);
-    expect(errorResponse.correlationId).toBeDefined();
-    expect(errorResponse.correlationId).toBe(requestIdFromHeader);
+    expect(errorResponse.correlationId).toBe('mock-uuid-v4');
+    expect(requestIdFromHeader).toBe('mock-uuid-v4');
   });
 });
