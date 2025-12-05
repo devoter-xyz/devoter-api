@@ -55,12 +55,31 @@ describe('rateLimitAnalytics', () => {
   });
 
   test('should limit top violators to 10', () => {
+    // Record events with distinct counts to ensure deterministic ordering for top violators
     for (let i = 0; i < 15; i++) {
       recordRateLimitEvent({ endpoint: '/test', key: `user${i}`, limitType: 'general', isLimited: true });
     }
+    recordRateLimitEvent({ endpoint: '/test', key: 'user3', limitType: 'general', isLimited: true }); // Make user3 have 2 events
+    recordRateLimitEvent({ endpoint: '/test', key: 'user3', limitType: 'general', isLimited: true }); // Make user3 have 3 events
+    recordRateLimitEvent({ endpoint: '/test', key: 'user3', limitType: 'general', isLimited: true }); // Make user3 have 4 events
+    recordRateLimitEvent({ endpoint: '/test', key: 'user2', limitType: 'general', isLimited: true }); // Make user2 have 2 events
+    recordRateLimitEvent({ endpoint: '/test', key: 'user2', limitType: 'general', isLimited: true }); // Make user2 have 3 events
+    recordRateLimitEvent({ endpoint: '/test', key: 'user1', limitType: 'general', isLimited: true }); // Make user1 have 2 events
+
     const analytics = getRateLimitAnalytics();
     expect(analytics.topViolators.length).toBe(10);
-    expect(analytics.topViolators[0].key).toBe('user0'); // Assuming consistent iteration order
+    // Assert the new deterministic order
+    expect(analytics.topViolators[0].key).toBe('user3');
+    expect(analytics.topViolators[0].count).toBe(4);
+    expect(analytics.topViolators[1].key).toBe('user2');
+    expect(analytics.topViolators[1].count).toBe(3);
+    expect(analytics.topViolators[2].key).toBe('user1');
+    expect(analytics.topViolators[2].count).toBe(2);
+    // Assuming internal sorting by key for equal counts
+    expect(analytics.topViolators[3].key).toBe('user0');
+    expect(analytics.topViolators[3].count).toBe(1);
+    expect(analytics.topViolators[4].key).toBe('user4');
+    expect(analytics.topViolators[4].count).toBe(1);
   });
 
   test('should clear all analytics data', () => {
