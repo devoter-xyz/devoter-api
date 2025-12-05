@@ -97,15 +97,16 @@ test('should handle CORS_ALLOWED_ORIGINS with a single wildcard', async () => {
   await wildcardServer.close();
 });
 
-test('should handle CORS_ALLOWED_ORIGINS with no value (default to *)', async () => {
+test('should disallow requests from any origin when CORS_ALLOWED_ORIGINS is not set', async () => {
   delete process.env.CORS_ALLOWED_ORIGINS;
   const defaultServer = await build();
   const defaultRequest = supertest(defaultServer.server);
   await defaultServer.ready();
 
   const response = await defaultRequest.get('/health').set('Origin', 'http://anotherdomain.com');
-  expect(response.headers['access-control-allow-origin']).toBe('*');
-  expect(response.statusCode).toBe(200);
+  expect(response.headers['access-control-allow-origin']).toBeUndefined();
+  expect(response.statusCode).toBe(403);
+  expect(response.body.message).toBe('Forbidden: Not allowed by CORS');
 
   await defaultServer.close();
 });
