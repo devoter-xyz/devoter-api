@@ -35,8 +35,7 @@ describe('requestIdMiddleware', () => {
       url: '/',
     });
 
-    expect(response.headers['x-request-id']).toBeDefined();
-    expect(typeof response.headers['x-request-id']).toBe('string');
+    expect(response.headers['x-request-id']).toBe('test-request-id');
   });
 
   it('should make request.id accessible and consistent with X-Request-ID header', async () => {
@@ -48,8 +47,9 @@ describe('requestIdMiddleware', () => {
     const payload = JSON.parse(response.payload);
     const requestIdFromHeader = response.headers['x-request-id'];
 
-    expect(payload.requestId).toBeDefined();
+    expect(payload.requestId).toBe('test-request-id');
     expect(payload.requestId).toBe(requestIdFromHeader);
+    expect(requestIdFromHeader).toBe('test-request-id');
   });
 
   it('should include request ID in error responses', async () => {
@@ -62,7 +62,8 @@ describe('requestIdMiddleware', () => {
     const requestIdFromHeader = response.headers['x-request-id'];
 
     expect(response.statusCode).toBe(HttpStatusCode.INTERNAL_SERVER_ERROR);
-    expect(errorResponse.correlationId).toBeDefined();
+    expect(errorResponse.correlationId).toBe('test-request-id');
     expect(errorResponse.correlationId).toBe(requestIdFromHeader);
+    expect(requestIdFromHeader).toBe('test-request-id');
   });
 });
