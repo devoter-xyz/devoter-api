@@ -26,7 +26,7 @@ const getCorsConfig = (): CorsConfig => {
     .filter((origin) => origin !== '');
 
   return {
-    allowedOrigins: allowedOrigins.length > 0 ? allowedOrigins : ['*'], // Default to '*' if no origins are specified
+    allowedOrigins: allowedOrigins, // If no origins are specified, it will be an empty array
     allowedMethods: allowedMethodsEnv.split(',').map((method) => method.trim()),
     allowedHeaders: allowedHeadersEnv.split(',').map((header) => header.trim()),
     credentials: env.CORS_CREDENTIALS === 'true',
