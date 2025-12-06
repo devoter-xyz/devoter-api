@@ -41,12 +41,14 @@ describe('ReplayProtectionCache', () => {
     cache.set(key1, 1); // Expires in 1 second
     cache.set(key2, 10); // Expires in 10 seconds
 
+    expect(cache.size).toBe(2);
     expect(cache.has(key1)).toBe(true);
     expect(cache.has(key2)).toBe(true);
 
     vi.advanceTimersByTime(1001); // Advance past key1's TTL
     vi.runOnlyPendingTimers(); // Trigger cleanup interval
 
+    expect(cache.size).toBe(1); // key1 should be cleaned up
     expect(cache.has(key1)).toBe(false); // Should be cleaned up
     expect(cache.has(key2)).toBe(true); // Should still be active
   });
@@ -81,6 +83,23 @@ describe('ReplayProtectionCache', () => {
     vi.advanceTimersByTime(501); // Past TTL
     expect(cache.has(key)).toBe(false);
     expect(cache.set(key, 1)).toBe(true); // Can set again
+  });
+
+  it('should return the correct cache size', () => {
+    expect(cache.size).toBe(0);
+
+    cache.set('key1', 10);
+    expect(cache.size).toBe(1);
+
+    cache.set('key2', 10);
+    expect(cache.size).toBe(2);
+
+    cache.set('key1', 10); // Should not increment size for existing key
+    expect(cache.size).toBe(2);
+
+    vi.advanceTimersByTime(10001); // Advance past TTL
+    vi.runOnlyPendingTimers(); // Trigger cleanup
+    expect(cache.size).toBe(0); // All should be cleaned up
   });
 
   it('should handle clock skew (setting time backwards)', () => {

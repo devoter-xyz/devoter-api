@@ -7,7 +7,7 @@ interface CacheEntry {
 
 class ReplayProtectionCache {
   private cache: Map<string, CacheEntry>;
-  private cleanupInterval: NodeJS.Timeout | null;
+  private cleanupInterval: ReturnType<typeof setInterval> | null;
 
   constructor(cleanupIntervalMs: number = 60 * 1000) { // Clean up every minute
     this.cache = new Map();
@@ -50,6 +50,10 @@ class ReplayProtectionCache {
       clearInterval(this.cleanupInterval);
       this.cleanupInterval = null;
     }
+  }
+
+  public get size(): number {
+    return this.cache.size;
   }
 }
 
