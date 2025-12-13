@@ -37,7 +37,7 @@ if (process.env.NODE_ENV !== "production") {
   globalForPrisma.prisma = prisma;
 }
 
-export const prismaPlugin: FastifyPluginAsync<Record<never, never>, Server, TypeProvider, Logger, PrismaClient> = async (server) => {
+export const prismaPlugin: FastifyPluginAsync = async (server) => {
   server.decorate("prisma", prisma);
   server.addHook("onClose", async () => {
     server.log.info("Disconnecting Prisma client...");

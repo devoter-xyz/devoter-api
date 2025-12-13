@@ -2,12 +2,15 @@
 import fastify, { FastifyInstance } from "fastify";
 import { config } from "dotenv";
 import { build } from "./server.js";
-import { getEnv } from "./config/env";
+import { getEnv } from "./config/env.js";
 import { replayProtectionCache } from "./lib/replayProtectionCache.js";
 import { clearRateLimitAnalytics } from "./lib/rateLimitAnalytics.js";
+import { prisma } from "./lib/prisma.js";
 
 // Load environment variables from .env file into process.env
-config();
+if (getEnv().NODE_ENV !== "test") {
+  config();
+}
 
 const env = getEnv();
 
@@ -45,6 +48,9 @@ if (env.NODE_ENV !== "test") {
         // and waits for existing connections to finish.
         await server.close();
         server.log.info("Fastify server closed.");
+
+        // Disconnect Prisma client
+        await prisma.$disconnect();
 
         // Cleanup other resources
         replayProtectionCache.stopCleanup();

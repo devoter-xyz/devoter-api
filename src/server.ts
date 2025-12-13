@@ -1,6 +1,7 @@
 
 import fastify from "fastify";
 import { config } from "dotenv";
+import { getEnv } from "./config/env";
 import cors from '@fastify/cors';
 import { corsOptions, validateCorsConfig } from './config/cors.js';
 import {
@@ -27,7 +28,9 @@ import docGenerator from "./utils/docGenerator.js";
 
 import { isShuttingDown } from "./index.js";
 
-config();
+if (getEnv().NODE_ENV !== "test") {
+  config();
+}
 
 declare module 'fastify' {
   interface FastifyRequest {

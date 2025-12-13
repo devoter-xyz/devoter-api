@@ -56,7 +56,7 @@ const commentsRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) => {
 
   // Post a new comment to a poll
 
-  fastify.post('/poll/:pollId', asyncHandler(async (request: FastifyRequest<{ Params: { pollId: string }; Body: { user?: string; comment?: string } }>, reply: FastifyReply) => {
+  fastify.post('/poll/:pollId', async (request: FastifyRequest<{ Params: { pollId: string }; Body: { user?: string; comment?: string } }>, reply: FastifyReply) => {
     const { pollId } = request.params;
     const validation = validateCommentInput(request.body as CommentInput);
     if (!validation.isValid) {
@@ -75,11 +75,11 @@ const commentsRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) => {
     comments.push(newComment);
     reply.status(201);
     return newComment;
-  }));
+  });
 
   // Delete a comment by id
 
-  fastify.delete('/:id', asyncHandler(async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+  fastify.delete('/:id', async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
     const { id } = request.params;
     const idx = comments.findIndex(c => c.id === id);
     if (idx === -1) {
@@ -88,7 +88,7 @@ const commentsRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) => {
     comments.splice(idx, 1);
     reply.status(204);
     return undefined;
-  }));
+  });
 };
 
 export default commentsRoutes;
