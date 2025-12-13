@@ -7,7 +7,9 @@ import { replayProtectionCache } from "./lib/replayProtectionCache.js";
 import { clearRateLimitAnalytics } from "./lib/rateLimitAnalytics.js";
 
 // Load environment variables from .env file into process.env
-config();
+if (getEnv().NODE_ENV !== "test") {
+  config();
+}
 
 const env = getEnv();
 

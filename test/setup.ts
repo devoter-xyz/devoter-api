@@ -1,8 +1,19 @@
 import { vi } from 'vitest';
+import * as envConfig from '../src/config/env';
 
 // Set a test database URL for Prisma
 process.env.DATABASE_URL = 'sqlite://file:memory.db?mode=memory&cache=shared';
 process.env.NODE_ENV = 'test';
+
+// Mock getEnv to ensure a valid environment is always returned during tests
+vi.spyOn(envConfig, 'getEnv').mockReturnValue({
+  NODE_ENV: 'test',
+  PORT: 3000,
+  HOST: 'localhost',
+  DATABASE_URL: 'sqlite://file:memory.db?mode=memory&cache=shared',
+  API_KEY_SECRET: 'test-api-key-secret-for-devoter-api',
+  SHUTDOWN_TIMEOUT_SECONDS: 1,
+});
 
 // Mock PrismaClient to prevent actual database connections during tests
 const mockPrismaClient = {
