@@ -13,19 +13,30 @@ export default async function pollsRoute(fastify: FastifyInstance) {
   // POST /polls - Create a new poll
   fastify.post("/polls", {
     schema: {
+      summary: "Create a new poll",
+      description: "Creates a new poll with a title, description, and a list of options. Requires wallet signature for authentication.",
       body: Type.Object({
-        title: Type.String({ minLength: 1, maxLength: 200 }),
-        description: Type.Optional(Type.String({ maxLength: 1000 })),
-        options: Type.Array(Type.String(), { minItems: 2, maxItems: 10 }),
-        walletAddress: Type.String({ pattern: '^0x[a-fA-F0-9]{40}$' }),
-        message: Type.String({ minLength: 1, maxLength: 1000 }),
-        signature: Type.String({ pattern: '^0x[a-fA-F0-9]{130}$' }),
+        title: Type.String({ minLength: 1, maxLength: 200, examples: ["Favorite Color Poll"] }),
+        description: Type.Optional(Type.String({ maxLength: 1000, examples: ["A poll to decide the best color."] })),
+        options: Type.Array(Type.String(), { minItems: 2, maxItems: 10, examples: [["Red", "Blue", "Green"]] }),
+        walletAddress: Type.String({ pattern: '^0x[a-fA-F0-9]{40}$', examples: ["0x742d35Cc6634C0532925a3b844Bc454e4438f444"] }),
+        message: Type.String({ minLength: 1, maxLength: 1000, examples: ["I am creating a new poll on Devoter."] }),
+        signature: Type.String({ pattern: '^0x[a-fA-F0-9]{130}$', examples: ["0x1b4ffc81a59ec761cb4f75e3c73bcc57c92d..."] }),
+      }, {
+        examples: [{
+          title: "Favorite Color Poll",
+          description: "A poll to decide the best color.",
+          options: ["Red", "Blue", "Green"],
+          walletAddress: "0x742d35Cc6634C0532925a3b844Bc454e4438f444",
+          message: "I am creating a new poll on Devoter.",
+          signature: "0x1b4ffc81a59ec761cb4f75e3c73bcc57c92d...",
+        }]
       }),
       response: {
         201: Type.Object({
           success: Type.Literal(true),
-          pollId: Type.String(),
-          message: Type.String(),
+          pollId: Type.String({ examples: ["clsdjhk000000j298s0j3x98d"] }),
+          message: Type.String({ examples: ["Poll created successfully"] }),
         }),
         400: Type.Object({
           success: Type.Literal(false),
@@ -72,20 +83,30 @@ export default async function pollsRoute(fastify: FastifyInstance) {
   // GET /polls - Get all polls
   fastify.get("/polls", {
     schema: {
+      summary: "Get all polls",
+      description: "Retrieves a list of all polls, with optional pagination.",
       querystring: Type.Object({
-        limit: Type.Integer({ minimum: 1, default: 50 }),
-        offset: Type.Integer({ minimum: 0, default: 0 }),
+        limit: Type.Integer({ minimum: 1, default: 50, examples: [10] }),
+        offset: Type.Integer({ minimum: 0, default: 0, examples: [0] }),
       }),
       response: {
         200: Type.Object({
           success: Type.Literal(true),
           polls: Type.Array(Type.Object({
-            id: Type.String(),
-            title: Type.String(),
-            description: Type.String(),
-            options: Type.Array(Type.String()),
-            createdAt: Type.String(),
-          })),
+            id: Type.String({ examples: ["clsdjhk000000j298s0j3x98d"] }),
+            title: Type.String({ examples: ["Favorite Color Poll"] }),
+            description: Type.String({ examples: ["A poll to decide the best color."] }),
+            options: Type.Array(Type.String(), { examples: [["Red", "Blue", "Green"]] }),
+            createdAt: Type.String({ examples: ["2023-10-27T10:00:00.000Z"] }),
+          }), {
+            examples: [{
+              id: "clsdjhk000000j298s0j3x98d",
+              title: "Favorite Color Poll",
+              description: "A poll to decide the best color.",
+              options: ["Red", "Blue", "Green"],
+              createdAt: "2023-10-27T10:00:00.000Z",
+            }]
+          }),
         }),
         500: Type.Object({
           success: Type.Literal(false),
@@ -122,19 +143,28 @@ export default async function pollsRoute(fastify: FastifyInstance) {
   // POST /polls/:id/vote - Vote on a poll
   fastify.post("/polls/:id/vote", {
     schema: {
+      summary: "Vote on a poll",
+      description: "Submits a vote for a specific option in a poll. Requires wallet signature for authentication and ensures a user can only vote once per poll.",
       params: Type.Object({
-        id: Type.String(),
+        id: Type.String({ examples: ["clsdjhk000000j298s0j3x98d"] }),
       }),
       body: Type.Object({
-        optionIndex: Type.Integer({ minimum: 0 }),
-        walletAddress: Type.String({ pattern: '^0x[a-fA-F0-9]{40}$' }),
-        message: Type.String({ minLength: 1, maxLength: 1000 }),
-        signature: Type.String({ pattern: '^0x[a-fA-F0-9]{130}$' }),
+        optionIndex: Type.Integer({ minimum: 0, examples: [0] }),
+        walletAddress: Type.String({ pattern: '^0x[a-fA-F0-9]{40}$', examples: ["0x742d35Cc6634C0532925a3b844Bc454e4438f444"] }),
+        message: Type.String({ minLength: 1, maxLength: 1000, examples: ["I am voting for option 0 in poll clsdjhk000000j298s0j3x98d."] }),
+        signature: Type.String({ pattern: '^0x[a-fA-F0-9]{130}$', examples: ["0x1b4ffc81a59ec761cb4f75e3c73bcc57c92d..."] }),
+      }, {
+        examples: [{
+          optionIndex: 0,
+          walletAddress: "0x742d35Cc6634C0532925a3b844Bc454e4438f444",
+          message: "I am voting for option 0 in poll clsdjhk000000j298s0j3x98d.",
+          signature: "0x1b4ffc81a59ec761cb4f75e3c73bcc57c92d...",
+        }]
       }),
       response: {
         201: Type.Object({
           success: Type.Literal(true),
-          message: Type.String(),
+          message: Type.String({ examples: ["Vote recorded successfully"] }),
         }),
         400: Type.Object({
           success: Type.Literal(false),
