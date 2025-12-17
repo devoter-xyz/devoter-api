@@ -18,13 +18,26 @@ The polls feature allows users to create, manage, and participate in polls.
 
 ### Creating a Poll
 
-To create a poll, send a POST request to `/polls` with the following JSON payload:
+To create a new poll, send a `POST` request to `/polls` with the following JSON payload. This endpoint requires a wallet signature for authentication.
 
+**Request Body Example:**
 ```json
 {
-  "title": "Sample Poll",
-  "options": ["Option 1", "Option 2", "Option 3"],
-  "expiresAt": "2023-12-31T23:59:59Z"
+  "title": "Favorite Color Poll",
+  "description": "A poll to decide the best color.",
+  "options": ["Red", "Blue", "Green"],
+  "walletAddress": "0x742d35Cc6634C0532925a3b844Bc454e4438f444",
+  "message": "I am creating a new poll on Devoter.",
+  "signature": "0x1b4ffc81a59ec761cb4f75e3c73bcc57c92d..."
+}
+```
+
+**Successful Response (201 Created):**
+```json
+{
+  "success": true,
+  "pollId": "clsdjhk000000j298s0j3x98d",
+  "message": "Poll created successfully"
 }
 ```
 
