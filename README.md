@@ -89,6 +89,14 @@ pnpm build
 pnpm start
 ```
 
+### Linting
+
+Fix linting issues automatically:
+
+```bash
+pnpm lint:fix
+```
+
 ### Graceful Shutdown
 
 The API implements a comprehensive graceful shutdown process to ensure minimal disruption and data integrity during restarts or deployments. Upon receiving a `SIGINT` or `SIGTERM` signal, the server initiates the following sequence:
